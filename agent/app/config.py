@@ -4,6 +4,7 @@
 """
 
 from typing import Dict, Any
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,19 +25,28 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 9900
 
+    # LLM provider
+    llm_provider: str = "dashscope"  # dashscope | openai
+
     # DashScope 配置
     dashscope_api_key: str = ""  # 默认空字符串，实际使用需从环境变量加载
     dashscope_model: str = "qwen-max"
     dashscope_embedding_model: str = "text-embedding-v4"  # v4 支持多种维度（默认 1024）
 
+    # OpenAI
+    openai_api_key: str = ""
+    openai_base_url: str = "https://api.openai.com/v1"
+    openai_model: str = "gpt-5.4-nano"
+
     # Milvus 配置
-    milvus_host: str = "localhost"
+    milvus_host: str = "127.0.0.1"
     milvus_port: int = 19530
     milvus_timeout: int = 10000  # 毫秒
 
     # RAG 配置
     rag_top_k: int = 3
-    rag_model: str = "qwen-max"  # 使用快速响应模型，不带扩展思考
+    # 可选：覆盖当前 provider 的默认聊天模型；为空时由 LLMFactory 按 provider 选择
+    rag_model: str = ""
 
     # 文档分块配置
     chunk_max_size: int = 800
@@ -66,6 +76,18 @@ class Settings(BaseSettings):
                 "url": self.mcp_monitor_url,
             }
         }
+
+    @field_validator("debug", mode="before")
+    @classmethod
+    def parse_debug(cls, value: Any) -> Any:
+        """Accept common environment names accidentally supplied as DEBUG."""
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"release", "prod", "production"}:
+                return False
+            if normalized in {"dev", "development"}:
+                return True
+        return value
 
 
 # 全局配置实例

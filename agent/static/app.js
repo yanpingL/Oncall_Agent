@@ -1280,10 +1280,12 @@ class SuperBizAgentApp {
                                                 this.updateAIOpsMessage(loadingMessageElement, fullResponse, []);
                                                 return true;
                                             } else if (sseMessage.type === 'error') {
-                                                throw new Error(sseMessage.data || sseMessage.message || '智能运维分析失败');
+                                                const error = new Error(sseMessage.data || sseMessage.message || '智能运维分析失败');
+                                                error.isAIOpsStreamError = true;
+                                                throw error;
                                             }
                                         } catch (e) {
-                                            if (e.message.includes('智能运维')) throw e;
+                                            if (e.isAIOpsStreamError) throw e;
                                             console.log('[AI Ops SSE] 单个JSON解析失败:', jsonStr);
                                         }
                                     }
@@ -1351,7 +1353,9 @@ class SuperBizAgentApp {
                                             this.updateAIOpsMessage(loadingMessageElement, fullResponse, []);
                                             return;
                                         } else if (sseMessage.type === 'error') {
-                                            throw new Error(sseMessage.data || sseMessage.message || '智能运维分析失败');
+                                            const error = new Error(sseMessage.data || sseMessage.message || '智能运维分析失败');
+                                            error.isAIOpsStreamError = true;
+                                            throw error;
                                         }
                                     } else {
                                         fullResponse += rawData;
@@ -1360,7 +1364,7 @@ class SuperBizAgentApp {
                                         }
                                     }
                                 } catch (e) {
-                                    if (e.message.includes('智能运维')) throw e;
+                                    if (e.isAIOpsStreamError) throw e;
                                     // 非 JSON 格式，直接追加原始数据
                                     fullResponse += rawData;
                                     if (loadingMessageElement) {

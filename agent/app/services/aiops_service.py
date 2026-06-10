@@ -316,7 +316,7 @@ class AIOpsService:
             return {
                 "type": "step_complete",
                 "stage": "step_executed",
-                "message": f"步骤执行完成 ({len(past_steps)}/{len(past_steps) + len(plan)})",
+                "message": f"步骤执行完成，剩余 {len(plan)} 个步骤",
                 "current_step": last_step,
                 "remaining_steps": len(plan)
             }

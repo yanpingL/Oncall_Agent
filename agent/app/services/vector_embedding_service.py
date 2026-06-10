@@ -122,7 +122,7 @@ class DashScopeEmbeddings(Embeddings):
 
 
 # 全局单例
-vector_embedding_service = DashScopeEmbeddings(
+bvector_embedding_service = DashScopeEmbeddings(
     api_key=config.dashscope_api_key,
     model=config.dashscope_embedding_model,
     dimensions=1024
