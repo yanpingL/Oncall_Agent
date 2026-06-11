@@ -1,31 +1,31 @@
-"""请求数据模型
+"""Request data models
 
-定义 API 请求的 Pydantic 模型
+Define Pydantic models for API requests
 """
 
 from pydantic import BaseModel, Field
 
 
 class ChatRequest(BaseModel):
-    """对话请求"""
+    """Chat request"""
 
-    id: str = Field(..., description="会话 ID", alias="Id")
-    question: str = Field(..., description="用户问题", alias="Question")
+    id: str = Field(..., description="Session ID", alias="Id")
+    question: str = Field(..., description="User question", alias="Question")
 
     class Config:
         populate_by_name = True
         json_schema_extra = {
             "example": {
                 "Id": "session-123",
-                "Question": "什么是向量数据库？"
+                "Question": "What is a vector database?"
             }
         }
 
 
 class ClearRequest(BaseModel):
-    """清空会话请求"""
+    """Clear session request"""
 
-    session_id: str = Field(..., description="会话 ID", alias="sessionId")
+    session_id: str = Field(..., description="Session ID", alias="sessionId")
 
     class Config:
         populate_by_name = True

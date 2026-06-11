@@ -1,6 +1,6 @@
-"""响应数据模型
+"""Response data models
 
-定义 API 响应的 Pydantic 模型
+Define Pydantic models for API responses
 """
 
 from pydantic import BaseModel, Field
@@ -8,31 +8,31 @@ from typing import List, Dict, Any, Optional
 
 
 class ChatResponse(BaseModel):
-    """对话响应"""
+    """Chat response"""
 
-    answer: str = Field(..., description="AI 回答")
-    session_id: str = Field(..., description="会话 ID")
+    answer: str = Field(..., description="AI answer")
+    session_id: str = Field(..., description="Session ID")
 
 
 class SessionInfoResponse(BaseModel):
-    """会话信息响应"""
+    """Session info response"""
 
-    session_id: str = Field(..., description="会话 ID")
-    message_count: int = Field(..., description="消息数量")
-    history: List[Dict[str, str]] = Field(..., description="历史消息列表")
+    session_id: str = Field(..., description="Session ID")
+    message_count: int = Field(..., description="message count")
+    history: List[Dict[str, str]] = Field(..., description="Historical message list")
 
 
 class ApiResponse(BaseModel):
-    """通用 API 响应"""
+    """Generic API response"""
 
-    status: str = Field(..., description="状态")
-    message: str = Field(..., description="消息")
-    data: Optional[Any] = Field(None, description="数据")
+    status: str = Field(..., description="Status")
+    message: str = Field(..., description="Message")
+    data: Optional[Any] = Field(None, description="Data")
 
 
 class HealthResponse(BaseModel):
-    """健康检查响应"""
+    """Health check response"""
 
-    status: str = Field(..., description="状态")
-    service: str = Field(..., description="服务名称")
-    version: str = Field(..., description="版本号")
+    status: str = Field(..., description="Status")
+    service: str = Field(..., description="Service name")
+    version: str = Field(..., description="Version")

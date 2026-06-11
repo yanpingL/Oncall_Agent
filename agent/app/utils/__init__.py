@@ -1,4 +1,4 @@
-"""工具类模块"""
+"""Utility module"""
 
 from app.utils import logger  # noqa: F401
 

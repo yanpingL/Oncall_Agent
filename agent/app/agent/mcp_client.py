@@ -1,6 +1,6 @@
 """
-MCP 客户端管理
-提供全局单例的 MCP 客户端，避免重复初始化
+MCP client management
+Provides a global singleton MCP client to avoid repeated initialization
 
 MCP: Model Context Protocol
 - A way for the agent to connect to external tool servers
@@ -22,7 +22,7 @@ from mcp.types import CallToolResult, TextContent
 from loguru import logger
 
 
-# 全局 MCP 客户端（延迟初始化）
+# Global MCP client, lazily initialized
 # Module-level global variable
 # At first, no MCP client, it is None
 # Later when get_mcp_client() called, the variable stores the shared client instance
@@ -58,7 +58,7 @@ def format_exception_chain(exc: BaseException) -> str:
 async def load_mcp_tools_safe(
     client: MultiServerMCPClient,
 ) -> tuple[list[Union[BaseTool, Any]], str | None]:
-    """加载 MCP 工具；失败时返回空列表与可读错误信息，不向上抛出。"""
+    """Load MCP tools; on failure return an empty list and readable error instead of raising."""
     try:
         tools = await client.get_tools()
         return tools, None
@@ -74,15 +74,15 @@ async def retry_interceptor(
     max_retries: int = 3,
     delay: float = 1.0,
 ):
-    """MCP 工具调用重试拦截器
+    """MCP tool-call retry interceptor
     
-    当工具调用失败时，使用指数退避策略自动重试。
-    如果所有重试都失败，返回包含错误信息的结果而不是抛出异常。
+    Automatically retry with exponential backoff when tool calls fail.
+    If all retries fail, return a result containing the error instead of raising.
     
-    MCPToolCallRequest 结构：
-    - name: str - 工具名称
-    - args: dict[str, Any] - 工具参数
-    - server_name: str - 服务器名称
+    MCPToolCallRequest structure:
+    - name: str - Tool name
+    - args: dict[str, Any] - Tool arguments
+    - server_name: str - Server name
     
     Args:
         request: MCP tool call request.
@@ -91,7 +91,7 @@ async def retry_interceptor(
         delay: Start with 1 second delay before retrying.
     
     Returns:
-        CallToolResult: 工具调用结果或错误信息
+        CallToolResult: Tool call result or error information
     """
 
     # Stores the most recent error, so it can be reported if all retries all 
@@ -100,29 +100,29 @@ async def retry_interceptor(
     for attempt in range(max_retries):
         try:
             logger.info(
-                f"调用 MCP 工具: {request.name} "
-                f"(服务器: {request.server_name}, 第 {attempt + 1}/{max_retries} 次尝试)"
+                f"Calling MCP tool: {request.name} "
+                f"(server: {request.server_name}, attempt  {attempt + 1}/{max_retries} )"
             )
             result = await handler(request)
-            logger.info(f"MCP 工具 {request.name} 调用成功")
+            logger.info(f"MCP tool {request.name} call succeeded")
             return result
             
         except Exception as e:
             last_error = e
             logger.warning(
-                f"MCP 工具 {request.name} 调用失败 "
-                f"(第 {attempt + 1}/{max_retries} 次): {str(e)}"
+                f"MCP tool {request.name} call failed "
+                f"(attempt  {attempt + 1}/{max_retries} time): {str(e)}"
             )
             
-            # 如果不是最后一次尝试，等待后重试
+            # If this is not the last attempt, wait and retry
             if attempt < max_retries - 1:
                 # Calculate exponential backoff delay
-                wait_time = delay * (2 ** attempt)  # 指数退避
-                logger.info(f"等待 {wait_time:.1f} 秒后重试...")
+                wait_time = delay * (2 ** attempt)  # exponential backoff
+                logger.info(f"Waiting {wait_time:.1f} sbefore retrying...")
                 await asyncio.sleep(wait_time) # wait before the next retry
     
-    # 所有重试都失败，返回错误结果而不是抛出异常
-    error_msg = f"工具 {request.name} 在 {max_retries} 次重试后仍然失败: {str(last_error)}"
+    # All retries failed; return an error result instead of raising
+    error_msg = f"Tool {request.name} after  {max_retries}  retries still failed: {str(last_error)}"
     logger.error(error_msg)
 
     # Return an MCP-compatible error result instead of raising an exception.
@@ -133,10 +133,10 @@ async def retry_interceptor(
     )
 
 
-# 从配置文件读取 MCP 服务器配置
+# Read MCP server config from configuration
 from app.config import config
 
-# 使用配置文件中定义的完整 MCP 服务器配置
+# Use the full MCP server config defined in configuration
 DEFAULT_MCP_SERVERS = config.mcp_servers
 
 
@@ -146,12 +146,12 @@ async def get_mcp_client(
     force_new: bool = False
 ) -> MultiServerMCPClient:
     """
-    获取或初始化 MCP 客户端（不带重试拦截器）
+    Get or initialize the MCP client without retry interceptor
     
-    这是一个单例模式，确保整个应用只有一个 MCP 客户端实例（除非 force_new=True）
+    This is a singleton pattern so the app has one MCP client unless force_new=True
     
-    从 langchain-mcp-adapters 0.1.0 开始，MultiServerMCPClient 不再支持作为上下文管理器使用。
-    直接创建实例即可使用。
+    Since langchain-mcp-adapters 0.1.0, MultiServerMCPClient no longer supports context-manager usage.
+    Create the instance directly and use it.
     
     Args:
         servers: Optional MCP server config. If not given, use DEFAULT_MCP_SERVERS.
@@ -159,29 +159,29 @@ async def get_mcp_client(
         force_new: If True, create a new client instead of using the global singleton
     
     Returns:
-        MultiServerMCPClient: MCP 客户端实例
+        MultiServerMCPClient: MCP client instance
     """
     global _mcp_client
     
-    # 如果请求新实例，直接创建并返回（不缓存）
+    # If a new instance is requested, create and return it without caching
     if force_new:
-        logger.info("创建新的 MCP 客户端实例（非单例）")
+        logger.info("Creating new MCP client instance, non-singleton")
         client = _create_mcp_client(
             servers or DEFAULT_MCP_SERVERS, 
             tool_interceptors
         )
-        # 不再需要 __aenter__()，直接返回即可
+        # __aenter__() is no longer needed; return directly
         return client
     
-    # 单例模式：如果已存在，直接返回
+    # Singleton mode: return the existing instance if present
     if _mcp_client is None:
-        logger.info("初始化全局 MCP 客户端...")
+        logger.info("Initializing global MCP client...")
         _mcp_client = _create_mcp_client(
             servers or DEFAULT_MCP_SERVERS, 
             tool_interceptors
         )
-        # 不再需要 __aenter__()，直接使用即可
-        logger.info("全局 MCP 客户端初始化完成")
+        # __aenter__() is no longer needed; use directly
+        logger.info("Global MCP client initialized")
     
     return _mcp_client
 
@@ -192,20 +192,20 @@ async def get_mcp_client_with_retry(
     force_new: bool = False
 ) -> MultiServerMCPClient:
     """
-    获取或初始化带重试功能的 MCP 客户端
+    Get or initialize MCP client with retry support
     
-    这是一个单例模式，确保整个应用只有一个 MCP 客户端实例（除非 force_new=True）
-    重试拦截器会自动添加到拦截器列表的开头
+    This is a singleton pattern so the app has one MCP client unless force_new=True
+    The retry interceptor is automatically prepended to the interceptor list
     
     Args:
-        servers: MCP 服务器配置，默认使用 DEFAULT_MCP_SERVERS
-        tool_interceptors: 自定义工具拦截器列表（会在重试拦截器之后添加）
-        force_new: 是否强制创建新实例（用于特殊场景，如需要不同配置）
+        servers: MCP server config,defaults to DEFAULT_MCP_SERVERS
+        tool_interceptors: custom tool interceptor list appended after retry interceptor
+        force_new: whether to force creating a new instance for special cases such as different config
     
     Returns:
-        MultiServerMCPClient: 带重试功能的 MCP 客户端实例
+        MultiServerMCPClient: MCP client instance with retry support
     """
-    # 构建拦截器列表：重试拦截器在最前面
+    # Build interceptor list with retry interceptor first
     interceptors = [retry_interceptor]
     if tool_interceptors:
         interceptors.extend(tool_interceptors)
@@ -222,40 +222,40 @@ def _create_mcp_client(
     tool_interceptors: Optional[List] = None
 ) -> MultiServerMCPClient:
     """
-    创建 MCP 客户端实例
+    Create MCP client instance
     
     Args:
-        servers: MCP 服务器配置
-        tool_interceptors: 工具拦截器列表
+        servers: MCP server config
+        tool_interceptors: tool interceptor list
     
     Returns:
-        MultiServerMCPClient: 未初始化的客户端实例
+        MultiServerMCPClient: uninitialized client instance
     """
-    # MultiServerMCPClient 的第一个参数直接接收 servers 配置字典
-    # 格式: {server_name: {"transport": "...", "url": "..."}}
+    # MultiServerMCPClient accepts the servers config dict as the first argument
+    # Format: {server_name: {"transport": "...", "url": "..."}}
     kwargs: Dict[str, Any] = {}
     
     if tool_interceptors:
         kwargs["tool_interceptors"] = tool_interceptors
     
-    # 第一个参数是 servers 配置，直接传递
+    # The first argument is the servers config and is passed directly
     return MultiServerMCPClient(servers, **kwargs)  # type: ignore[arg-type]
 
 
 def suggest_mcp_transport(url: str, transport: str) -> str | None:
-    """URL 与 transport 明显不匹配时给出建议（不自动改写配置）。"""
+    """Return a suggestion when URL and transport clearly mismatch; do not rewrite config automatically."""
     lower_url = url.lower()
     if "/sse" in lower_url and transport.replace("_", "-") in (
         "streamable-http",
         "http",
     ):
         return (
-            f"MCP URL 含 /sse/ 但 transport={transport!r}，"
-            "腾讯云等托管端点应使用 transport=sse"
+            f"MCP URL contains /sse/ but transport={transport!r},"
+            "hosted endpoints such as Tencent Cloud should use transport=sse"
         )
     if transport == "sse" and "/mcp" in lower_url and "/sse" not in lower_url:
         return (
-            f"MCP URL 为本地 FastMCP 路径但 transport={transport!r}，"
-            "本地服务通常应使用 transport=streamable-http"
+            f"MCP URL is a local FastMCP path but transport={transport!r},"
+            "local services usually should use transport=streamable-http"
         )
     return None

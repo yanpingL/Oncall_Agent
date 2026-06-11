@@ -1,61 +1,61 @@
 @echo off
 chcp 65001 >nul
 echo ====================================
-echo 停止 SuperBizAgent 服务
+echo Stop SuperBizAgent services
 echo ====================================
 echo.
 
-REM 停止 FastAPI 服务
-echo [1/4] 停止 FastAPI 服务...
+REM Stop FastAPI service
+echo [1/4] Stop FastAPI service...
 taskkill /FI "WINDOWTITLE eq SuperBizAgent API*" /F >nul 2>&1
 if errorlevel 1 (
-    echo [信息] FastAPI 服务未运行或已停止
+    echo [info] FastAPI service is not running or already stopped
 ) else (
-    echo [成功] FastAPI 服务已停止
+    echo [success] FastAPI service stopped
 )
 echo.
 
-REM 停止 CLS MCP 服务
-echo [2/4] 停止 CLS MCP 服务...
+REM Stop CLS MCP service
+echo [2/4] Stop CLS MCP service...
 taskkill /FI "WINDOWTITLE eq CLS MCP Server*" /F >nul 2>&1
 if errorlevel 1 (
-    echo [信息] CLS MCP 服务未运行或已停止
+    echo [info] CLS MCP service is not running or already stopped
 ) else (
-    echo [成功] CLS MCP 服务已停止
+    echo [success] CLS MCP service stopped
 )
 echo.
 
-REM 停止 Monitor MCP 服务
-echo [3/4] 停止 Monitor MCP 服务...
+REM Stop Monitor MCP service
+echo [3/4] Stop Monitor MCP service...
 taskkill /FI "WINDOWTITLE eq Monitor MCP Server*" /F >nul 2>&1
 if errorlevel 1 (
-    echo [信息] Monitor MCP 服务未运行或已停止
+    echo [info] Monitor MCP service is not running or already stopped
 ) else (
-    echo [成功] Monitor MCP 服务已停止
+    echo [success] Monitor MCP service stopped
 )
 echo.
 
-REM 停止 Docker 容器
-echo [4/4] 停止 Milvus 容器...
+REM Stop Docker containers
+echo [4/4] Stop Milvus containers...
 docker ps --format "{{.Names}}" | findstr "milvus" >nul 2>&1
 if not errorlevel 1 (
     docker compose -f vector-database.yml down
     if errorlevel 1 (
-        echo [错误] Docker 容器停止失败
+        echo [error] Failed to stop Docker containers
     ) else (
-        echo [成功] Milvus 容器已停止
+        echo [success] Milvus containers stopped
     )
 ) else (
-    echo [信息] Milvus 容器未运行
+    echo [info] Milvus container is not running
 )
 echo.
 
 echo ====================================
-echo 所有服务已停止！
+echo All services stopped!
 echo ====================================
 echo.
-echo 提示:
-echo   - 如需完全清理 Docker 数据卷，运行:
+echo hint:
+echo   - To fully remove Docker volumes, run:
 echo     docker compose -f vector-database.yml down -v
 echo.
 pause

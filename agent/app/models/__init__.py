@@ -1,1 +1,1 @@
-"""数据模型模块"""
+"""Data model module"""

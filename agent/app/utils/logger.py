@@ -1,6 +1,6 @@
-"""日志配置模块
+"""Logger configuration module
 
-使用 Loguru 配置应用日志
+Use Loguru to configure application logs
 """
 
 import sys
@@ -9,36 +9,36 @@ from app.config import config
 
 
 def setup_logger():
-    """配置日志系统
+    """Configure logging system
 
-    按照 Loguru 最佳实践配置全局 logger：
-    1. 移除默认处理器
-    2. 添加控制台输出（带颜色）
-    3. 添加文件输出（按天轮转，自动压缩，异步写入）
+    Configure the global logger following Loguru best practices:
+    1. Remove default handler
+    2. Add colored console output
+    3. Add file output with daily rotation, compression, and async writes
     """
-    # 移除默认处理器
+    # Remove default handler
     logger.remove()
 
-    # 添加控制台输出（带颜色格式）
+    # Add colored console output format
     logger.add(
         sys.stdout,
         format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{module}</cyan>.<cyan>{function}</cyan>:<cyan>{line}</cyan> | <level>{message}</level>",
         level="DEBUG" if config.debug else "INFO",
         colorize=True,
-        backtrace=True,  # 显示完整异常栈信息
-        diagnose=config.debug,  # Debug 模式下显示变量值
+        backtrace=True,  # Show full exception stack traces
+        diagnose=config.debug,  # Show variable values in debug mode
     )
 
-    # 添加文件输出（按天轮转，自动压缩）
+    # Add file output with daily rotation and automatic compression
     logger.add(
         "logs/app_{time:YYYY-MM-DD}.log",
-        rotation="00:00",  # 每天0点自动切割新日志文件
-        retention="7 days",  # 仅保留最近7天的日志
-        compression="zip",  # 过期日志自动压缩为zip
-        encoding="utf-8",  # 解决中文乱码
-        enqueue=True,  # 异步写入，提升性能（避免IO阻塞）
-        backtrace=True,  # 显示完整异常栈信息
-        diagnose=True,  # 显示变量值，便于调试
+        rotation="00:00",  # Rotate log file daily at midnight
+        retention="7 days",  # Keep only the last 7 days of logs
+        compression="zip",  # Compress expired logs as zip
+        encoding="utf-8",  # Avoid encoding issues
+        enqueue=True,  # Async write for better performance and less IO blocking
+        backtrace=True,  # Show full exception stack traces
+        diagnose=True,  # Show variable values for debugging
         level="INFO",
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {module}.{function}:{line} | {message}",
     )

@@ -1,4 +1,4 @@
-"""向量索引服务模块"""
+"""Vector indexing service module"""
 
 from datetime import datetime
 from pathlib import Path
@@ -12,7 +12,7 @@ from app.services.vector_store_manager import vector_store_manager
 
 
 class IndexingResult:
-    """索引结果类"""
+    """Indexing result class"""
 
     def __init__(self):
         self.success = False
@@ -26,25 +26,25 @@ class IndexingResult:
         self.failed_files: Dict[str, str] = {}
 
     def increment_success_count(self):
-        """增加成功计数"""
+        """Increment success count"""
         self.success_count += 1
 
     def increment_fail_count(self):
-        """增加失败计数"""
+        """Increment failure count"""
         self.fail_count += 1
 
     def add_failed_file(self, file_path: str, error: str):
-        """添加失败文件"""
+        """Add failed file"""
         self.failed_files[file_path] = error
 
     def get_duration_ms(self) -> int:
-        """获取耗时（毫秒）"""
+        """Get duration in milliseconds"""
         if self.start_time and self.end_time:
             return int((self.end_time - self.start_time).total_seconds() * 1000)
         return 0
 
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
+        """Convert to dictionary"""
         return {
             "success": self.success,
             "directory_path": self.directory_path,
@@ -58,72 +58,72 @@ class IndexingResult:
 
 
 class VectorIndexService:
-    """向量索引服务 - 负责读取文件、生成向量、存储到 Milvus"""
+    """Vector indexing service that reads files, generates vectors, and stores them in Milvus"""
 
     def __init__(self):
-        """初始化向量索引服务"""
+        """Initialize vector indexing service"""
         self.upload_path = "./uploads"
-        logger.info("向量索引服务初始化完成")
+        logger.info("Vector indexing service initialized")
 
     def index_directory(self, directory_path: Optional[str] = None) -> IndexingResult:
         """
-        索引指定目录下的所有文件
+        Index all files in the specified directory
 
         Args:
-            directory_path: 目录路径（可选，默认使用配置的上传目录）
+            directory_path: Directory path, optional; defaults to the configured upload directory
 
         Returns:
-            IndexingResult: 索引结果
+            IndexingResult: Indexing result
         """
         result = IndexingResult()
         result.start_time = datetime.now()
 
         try:
-            # 使用指定目录或默认上传目录
+            # Use the specified directory or default upload directory
             target_path = directory_path if directory_path else self.upload_path
             dir_path = Path(target_path).resolve()
 
             if not dir_path.exists() or not dir_path.is_dir():
-                raise ValueError(f"目录不存在或不是有效目录: {target_path}")
+                raise ValueError(f"Directory does not exist or is not valid: {target_path}")
 
             result.directory_path = str(dir_path)
 
-            # 获取所有支持的文件
+            # Get all supported files
             files = list(dir_path.glob("*.txt")) + list(dir_path.glob("*.md"))
 
             if not files:
-                logger.warning(f"目录中没有找到支持的文件: {target_path}")
+                logger.warning(f"No supported files found in directory: {target_path}")
                 result.total_files = 0
                 result.success = True
                 result.end_time = datetime.now()
                 return result
 
             result.total_files = len(files)
-            logger.info(f"开始索引目录: {target_path}, 找到 {len(files)} 个文件")
+            logger.info(f"Starting directory indexing: {target_path}, found {len(files)} files")
 
-            # 遍历并索引每个文件
+            # Iterate and index each file
             for file_path in files:
                 try:
                     self.index_single_file(str(file_path))
                     result.increment_success_count()
-                    logger.info(f"✓ 文件索引成功: {file_path.name}")
+                    logger.info(f"✓ File indexed successfully: {file_path.name}")
                 except Exception as e:
                     result.increment_fail_count()
                     result.add_failed_file(str(file_path), str(e))
-                    logger.error(f"✗ 文件索引失败: {file_path.name}, 错误: {e}")
+                    logger.error(f"✗ File indexing failed: {file_path.name}, error: {e}")
 
             result.success = result.fail_count == 0
             result.end_time = datetime.now()
 
             logger.info(
-                f"目录索引完成: 总数={result.total_files}, "
-                f"成功={result.success_count}, 失败={result.fail_count}"
+                f"Directory indexing completed: total={result.total_files}, "
+                f"success={result.success_count}, failed={result.fail_count}"
             )
 
             return result
 
         except Exception as e:
-            logger.error(f"索引目录失败: {e}")
+            logger.error(f"Directory indexing failed: {e}")
             result.success = False
             result.error_message = str(e)
             result.end_time = datetime.now()
@@ -131,59 +131,59 @@ class VectorIndexService:
 
     def index_single_file(self, file_path: str):
         """
-        索引单个文件 (使用新的 LangChain 分割器)
+        Index a single file using the new LangChain splitter
 
         Args:
-            file_path: 文件路径
+            file_path: File path
 
         Raises:
-            ValueError: 文件不存在时抛出
-            RuntimeError: 索引失败时抛出
+            ValueError: Raised when the file does not exist
+            RuntimeError: Raised when indexing fails
         """
         path = Path(file_path).resolve()
 
         if not path.exists() or not path.is_file():
-            raise ValueError(f"文件不存在: {file_path}")
+            raise ValueError(f"File does not exist: {file_path}")
 
-        logger.info(f"开始索引文件: {path}")
+        logger.info(f"Starting file indexing: {path}")
 
         try:
-            # 1. 读取文件内容
+            # 1. Read file content
             content = path.read_text(encoding="utf-8")
-            logger.info(f"读取文件: {path}, 内容长度: {len(content)} 字符")
+            logger.info(f"Read file: {path}, content length: {len(content)} characters")
 
-            # 2. 删除该文件的旧数据（如果存在）
+            # 2. Delete old data for this file if it exists
             normalized_path = path.as_posix()
             vector_store_manager.delete_by_source(normalized_path)
 
-            # 3. 使用新的文档分割器
+            # 3. Use the new document splitter
             documents = document_splitter_service.split_document(content, normalized_path)
-            logger.info(f"文档分割完成: {file_path} -> {len(documents)} 个分片")
+            logger.info(f"Document splitting completed: {file_path} -> {len(documents)} chunks")
 
-            # 4. 添加文档到向量存储
+            # 4. Add documents to vector store
             if documents:
                 vector_store_manager.add_documents(documents)
-                logger.info(f"文件索引完成: {file_path}, 共 {len(documents)} 个分片")
+                logger.info(f"File indexing completed: {file_path}, total {len(documents)} chunks")
             else:
-                logger.warning(f"文件内容为空或无法分割: {file_path}")
+                logger.warning(f"File content is empty or cannot be split: {file_path}")
 
         except Exception as e:
-            logger.error(f"索引文件失败: {file_path}, 错误: {e}")
-            raise RuntimeError(f"索引文件失败: {e}") from e
+            logger.error(f"File indexing failed: {file_path}, error: {e}")
+            raise RuntimeError(f"File indexing failed: {e}") from e
 
     def index_aiops_report(self, report: str, session_id: str) -> str:
         """
-        将 AIOps 最终诊断报告保存为 Markdown，并写入向量知识库。
+        Save the final AIOps diagnosis report as Markdown and write it to the vector knowledge base.
 
         Args:
-            report: AIOps Agent 生成的 Markdown 报告
-            session_id: 会话 ID，用于生成可追踪文件名
+            report: Markdown report generated by the AIOps Agent
+            session_id: Session ID used to generate a traceable file name
 
         Returns:
-            str: 已保存并索引的 Markdown 文件路径
+            str: Saved and indexed Markdown file path
         """
         if not report or not report.strip():
-            raise ValueError("AIOps 诊断报告不能为空")
+            raise ValueError("AIOps diagnosis report cannot be empty")
 
         created_at = datetime.now().isoformat(timespec="seconds")
         safe_session_id = self._sanitize_filename_part(session_id or "default")
@@ -200,7 +200,7 @@ class VectorIndexService:
         )
 
         file_path.write_text(markdown_content, encoding="utf-8")
-        logger.info(f"AIOps 诊断报告已保存为 Markdown: {file_path}")
+        logger.info(f"AIOps diagnosis report saved as Markdown: {file_path}")
 
         self.index_single_file(str(file_path))
         return str(file_path)
@@ -211,7 +211,7 @@ class VectorIndexService:
         session_id: str,
         created_at: str,
     ) -> str:
-        """为生成报告添加轻量元数据，保留正文 Markdown 结构。"""
+        """Add lightweight metadata to generated reports while preserving the Markdown body."""
         metadata = (
             "---\n"
             "document_type: aiops_report\n"
@@ -223,11 +223,11 @@ class VectorIndexService:
         return metadata + report.strip() + "\n"
 
     def _sanitize_filename_part(self, value: str) -> str:
-        """生成适合作为文件名片段的字符串。"""
+        """Generate a string suitable as a file-name segment."""
         sanitized = re.sub(r"[^a-zA-Z0-9_-]+", "_", value.strip())
         sanitized = sanitized.strip("_")
         return sanitized[:80] or "default"
 
 
-# 全局单例
+# Global singleton
 vector_index_service = VectorIndexService()

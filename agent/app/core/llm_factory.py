@@ -1,13 +1,13 @@
-"""LLM 工厂类
+"""LLM factory
 
-使用 LangChain ChatOpenAI 通过 OpenAI 兼容模式调用阿里云 DashScope
-这种方式便于后续切换到其他支持 OpenAI API 的模型提供商
+Use LangChain ChatOpenAI to call Alibaba Cloud DashScope through OpenAI-compatible mode
+This makes it easier to switch to other OpenAI API-compatible model providers later
 
-支持的模型提供商（只需修改 base_url 和 api_key）：
-- 阿里云 DashScope: https://dashscope.aliyuncs.com/compatible-mode/v1
+Supported model providers, by changing only base_url and api_key:
+- Alibaba Cloud DashScope: https://dashscope.aliyuncs.com/compatible-mode/v1
 - OpenAI: https://api.openai.com/v1
 - Azure OpenAI: https://{resource}.openai.azure.com
-- 其他兼容 OpenAI API 的服务
+- Other OpenAI API-compatible services
 """
 
 from langchain_openai import ChatOpenAI
@@ -15,9 +15,9 @@ from app.config import config
 
 
 class LLMFactory:
-    """LLM 工厂类 - 使用 OpenAI 兼容模式"""
+    """LLM factory - using OpenAI-compatible mode"""
 
-    # 阿里云 DashScope OpenAI 兼容模式 URL
+    # Alibaba Cloud DashScope OpenAI-compatible URL
     DASHSCOPE_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
     @staticmethod
@@ -54,5 +54,5 @@ class LLMFactory:
 
         return llm
 
-# 全局 LLM 工厂实例
+# Global LLM factory instance
 llm_factory = LLMFactory()

@@ -1,6 +1,6 @@
 """
-Planner 节点：制定执行计划
-基于 LangGraph 官方教程实现
+Planner node: create an execution plan.
+Implemented based on the official LangGraph tutorial.
 """
 
 import re
@@ -19,20 +19,20 @@ from .utils import format_tools_description
 
 
 class Plan(BaseModel):
-    """计划的输出格式"""
+    """Planner output format."""
     """
     Defines a field named [steps], its type is a list of strings. Eg. valid value:
     Plan(steps=[
-        "检查 Prometheus 告警",
-        "分析异常指标",
-        "给出修复建议"
+        "Check Prometheus alerts",
+        "Analyze abnormal metrics",
+        "Provide remediation recommendations"
     ])
 
     Field() mean: Pydantic helper used to add extra information or rules to a model field. Only a metadata
     for the steps, not part of the steps.
     """
     steps: List[str] = Field(
-        description="完成任务所需的不同步骤。这些步骤应该按顺序执行，每一步都建立在前一步的基础上。"
+        description="The ordered steps required to complete the task. Each step should build on the previous one."
     )
 
 
@@ -46,7 +46,7 @@ def _normalize_plan_steps(plan_steps: List[str]) -> List[str]:
         if not step or step.startswith("description_used_by_reasoning"):
             continue
 
-        markers = list(re.finditer(r"(?m)(?=^\s*步骤\s*\d+\s*[：:])", step))
+        markers = list(re.finditer(r"(?m)(?=^\s*(?:Step|Step)\s*\d+\s*[::])", step))
         if len(markers) <= 1:
             split_steps.append(step)
             continue
@@ -61,35 +61,35 @@ def _normalize_plan_steps(plan_steps: List[str]) -> List[str]:
     return split_steps
 
 
-# Planner 提示词
+# Planner prompt.
 planner_prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
             dedent("""
-                作为一个专家级别的规划者，你需要将复杂的任务分解为可执行的步骤。
+                You are an expert planner. Break complex tasks into executable steps.
 
-                可用工具列表（用于制定计划时参考）：
+                Available tools, for planning reference:
 
                 {tools_description}
 
-                注意：你的职责是制定计划，实际的工具调用由 Executor 负责执行。
+                Note: your responsibility is to create the plan. The Executor performs the actual tool calls.
 
                 {experience_context}
 
-                对于给定的任务，请创建一个简单的、逐步的计划来完成它。计划应该：
-                - 将任务分解为逻辑上独立的步骤
-                - 每个步骤应该明确使用哪些工具(如果需要工具的话)来获取信息, 最好能同时提供工具执行所需要的参数
-                - 步骤之间应该有清晰的依赖关系
-                - 步骤描述要具体、可操作
-                - **如果有相关经验文档，请参考其中的方法和步骤制定计划**
+                For the given task, create a simple step-by-step plan. The plan should:
+                - Break the task into logically independent steps
+                - Clearly state which tools each step should use, if tools are needed, and preferably include the parameters needed by those tools
+                - Preserve clear dependencies between steps
+                - Make every step specific and actionable
+                - **If relevant experience documents are available, use their methods and steps as planning references**
 
-                示例输入："分析当前系统的性能问题"
-                示例输出（假设有对应工具）：
-                步骤1: 使用 get_metrics 工具收集系统的 CPU 和内存使用情况
-                步骤2: 使用 query_logs 工具检查最近的错误日志
-                步骤3: 使用 query_database 工具分析慢查询日志
-                步骤4: 综合以上信息生成性能分析报告
+                Example input: "Analyze the current system performance issue"
+                Example output, assuming matching tools exist:
+                Step 1: Use the get_metrics tool to collect CPU and memory usage
+                Step 2: Use the query_logs tool to inspect recent error logs
+                Step 3: Use the query_database tool to analyze slow query logs
+                Step 4: Combine the information above into a performance analysis report
             """).strip(),
         ),
         ("placeholder", "{messages}"),
@@ -99,58 +99,58 @@ planner_prompt = ChatPromptTemplate.from_messages(
 
 async def planner(state: PlanExecuteState) -> Dict[str, Any]:
     """
-    规划节点：根据用户输入生成执行计划
+    Planner node: generate an execution plan from user input.
 
-    流程：
-    1. 先查询内部文档，获取相关经验和最佳实践
-    2. 基于经验文档和可用工具制定执行计划
+    Flow:
+    1. Query internal documents for relevant experience and best practices.
+    2. Create an execution plan based on experience documents and available tools.
     """
-    logger.info("=== Planner：制定执行计划 ===")
+    logger.info("=== Planner: creating execution plan ===")
 
     input_text = state.get("input", "")
-    logger.info(f"用户输入: {input_text}")
+    logger.info(f"User input: {input_text}")
 
     try:
-        # 步骤1: 查询内部文档获取相关经验
-        logger.info("查询内部文档，寻找相关经验...")
+        # Step 1: Query internal documents for relevant experience.
+        logger.info("Querying internal documents for relevant experience...")
         experience_docs = ""
         try:
-            # retrieve_knowledge 使用 response_format="content_and_artifact"
-            # ainvoke() 只返回 content（字符串），不是元组
+            # retrieve_knowledge uses response_format="content_and_artifact".
+            # ainvoke() returns only content as a string, not a tuple.
             context_str = await retrieve_knowledge.ainvoke({"query": input_text})
             if context_str and context_str.strip():
                 experience_docs = context_str
-                logger.info(f"找到相关经验文档，长度: {len(experience_docs)}")
+                logger.info(f"Found relevant experience documents, length: {len(experience_docs)}")
             else:
-                logger.info("未找到相关经验文档")
+                logger.info("No relevant experience documents found")
         except Exception as e:
-            logger.warning(f"查询内部文档失败: {e}")
+            logger.warning(f"Failed to query internal documents: {e}")
 
-        # 步骤2: 获取可用工具列表
-        # 获取本地工具
+        # Step 2: Get available tools.
+        # Get local tools.
         local_tools = list(DEFAULT_LOCAL_AGENT_TOOLS)
 
-        # 获取 MCP 工具
+        # Get MCP tools.
         mcp_client = await get_mcp_client_with_retry()
         mcp_tools = await mcp_client.get_tools()
 
-        # 合并所有工具
+        # Combine all tools.
         all_tools = local_tools + mcp_tools
-        logger.info(f"可用工具数量: 本地 {len(local_tools)} + MCP {len(mcp_tools)}")
+        logger.info(f"Available tools: local {len(local_tools)} + MCP {len(mcp_tools)}")
 
-        # 格式化工具描述
+        # Format tool descriptions.
         tools_description = format_tools_description(all_tools)
 
-        # 步骤3: 格式化经验文档上下文
+        # Step 3: Format experience document context.
         """
         [experience_context] is declared inside the [if else] block, but
         as long as every possible branch assigns a value to if, then it's safe to use it outside the block.
         """
         if experience_docs:
             experience_context = dedent(f"""
-                ## 相关经验文档
+                ## Relevant Experience Documents
 
-                以下是从知识库中检索到的相关经验和最佳实践，请参考这些经验制定执行计划：
+                The following relevant experience and best practices were retrieved from the knowledge base. Use them as references when creating the execution plan:
 
                 {experience_docs}
 
@@ -159,7 +159,7 @@ async def planner(state: PlanExecuteState) -> Dict[str, Any]:
         else:
             experience_context = ""
 
-        # 步骤4: 创建 LLM 并生成计划
+        # Step 4: Create the LLM and generate the plan.
         llm = llm_factory.create_chat_model(
             model=config.rag_model,
             temperature=0,
@@ -170,39 +170,39 @@ async def planner(state: PlanExecuteState) -> Dict[str, Any]:
         # llm.with_structured_output(Plan) wraps the LLM so its response is parsed into a Plan object.
         planner_chain = planner_prompt | llm.with_structured_output(Plan)
 
-        # 调用 LLM 生成计划
+        # Call the LLM to generate the plan.
         plan_result = await planner_chain.ainvoke({
             "messages": [("user", input_text)],
             "tools_description": tools_description,
             "experience_context": experience_context
         })
 
-        # 提取步骤列表
+        # Extract step list.
         if isinstance(plan_result, Plan):
             plan_steps = plan_result.steps
         else:
-            # 如果返回的是字典，提取 steps 字段
+            # If a dict is returned, extract the steps field.
             plan_steps = plan_result.get("steps", [])  # type: ignore
 
         plan_steps = _normalize_plan_steps(plan_steps)
 
-        logger.info(f"计划已生成，共 {len(plan_steps)} 个步骤")
+        logger.info(f"Plan generated with {len(plan_steps)} steps")
         # enumerate() is a built-in function that returns a tuple containing a count (from start=1 by default) and the value
         # enumerate(plan_stpes, 1) --> Loop through each step in plan_steps, and start from 1
         for i, step in enumerate(plan_steps, 1):
-            logger.info(f"  步骤{i}: {step}")
+            logger.info(f"  Step {i}: {step}")
 
         return {"plan": plan_steps}
 
     except Exception as e:
         # e: the exception that was caught
         # exc_info=True: tells the logger to include the full traceback to help debug where the error happened
-        logger.error(f"生成计划失败: {e}", exc_info=True)
-        # 返回一个默认计划
+        logger.error(f"Failed to generate plan: {e}", exc_info=True)
+        # Return a default plan.
         return {
             "plan": [
-                "收集相关信息",
-                "分析数据",
-                "生成报告"
+                "Collect relevant information",
+                "Analyze the data",
+                "Generate the report"
             ]
         }

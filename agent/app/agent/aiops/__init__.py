@@ -1,6 +1,6 @@
 """
-通用 Plan-Execute-Replan 框架
-基于 LangGraph 官方教程实现
+Generic Plan-Execute-Replan framework
+Implemented based on the official LangGraph tutorial
 
 Defines the public exports of this package
 other file can directly import planner from app/agent/aiops
