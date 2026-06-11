@@ -1,6 +1,6 @@
-"""配置管理模块
+"""Configuration management module
 
-使用 Pydantic Settings 实现类型安全的配置管理
+Use Pydantic Settings for type-safe configuration management
 """
 
 from typing import Dict, Any
@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """应用配置"""
+    """Application config"""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -18,7 +18,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # 应用配置
+    # Application config
     app_name: str = "SuperBizAgent"
     app_version: str = "1.0.0"
     debug: bool = False
@@ -28,32 +28,32 @@ class Settings(BaseSettings):
     # LLM provider
     llm_provider: str = "dashscope"  # dashscope | openai
 
-    # DashScope 配置
-    dashscope_api_key: str = ""  # 默认空字符串，实际使用需从环境变量加载
+    # DashScope config
+    dashscope_api_key: str = ""  # Default empty string; should be loaded from environment variables in practice
     dashscope_model: str = "qwen-max"
-    dashscope_embedding_model: str = "text-embedding-v4"  # v4 支持多种维度（默认 1024）
+    dashscope_embedding_model: str = "text-embedding-v4"  # v4 supports multiple dimensions, default 1024
 
     # OpenAI
     openai_api_key: str = ""
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-5.4-nano"
 
-    # Milvus 配置
+    # Milvus config
     milvus_host: str = "127.0.0.1"
     milvus_port: int = 19530
-    milvus_timeout: int = 10000  # 毫秒
+    milvus_timeout: int = 10000  # milliseconds
 
-    # RAG 配置
+    # RAG config
     rag_top_k: int = 3
-    # 可选：覆盖当前 provider 的默认聊天模型；为空时由 LLMFactory 按 provider 选择
+    # Optional override for the current provider default chat model; empty means LLMFactory selects by provider
     rag_model: str = ""
 
-    # 文档分块配置
+    # Document chunking config
     chunk_max_size: int = 800
     chunk_overlap: int = 100
 
-    # MCP 服务配置（transport: stdio | sse | streamable-http）
-    # 腾讯云托管 MCP 的 URL 通常含 /sse/，需使用 sse；本地 FastMCP 使用 streamable-http
+    # MCP service config (transport: stdio | sse | streamable-http)
+    # Tencent Cloud hosted MCP URLs usually contain /sse/ and should use sse; local FastMCP uses streamable-http
     mcp_cls_transport: str = "streamable-http"
     mcp_cls_url: str = "http://localhost:8003/mcp"
     mcp_monitor_transport: str = "streamable-http"
@@ -65,7 +65,7 @@ class Settings(BaseSettings):
 
     @property
     def mcp_servers(self) -> Dict[str, Dict[str, Any]]:
-        """获取完整的 MCP 服务器配置"""
+        """Get full MCP server config"""
         return {
             "cls": {
                 "transport": self.mcp_cls_transport,
@@ -90,5 +90,5 @@ class Settings(BaseSettings):
         return value
 
 
-# 全局配置实例
+# Global config instance
 config = Settings()

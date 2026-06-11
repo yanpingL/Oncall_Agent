@@ -1,12 +1,12 @@
 """
-AIOps Agent 通用工具函数
+Common utility functions for AIOps Agent
 """
 
 from typing import List
 
 
 def format_tools_description(tools: List) -> str:
-    """格式化工具列表为描述文本"""
+    """Format tool list as description text"""
     tool_descriptions = []
     for tool in tools:
         if hasattr(tool, 'name') and hasattr(tool, 'description'):

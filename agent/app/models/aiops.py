@@ -1,5 +1,5 @@
 """
-AIOps 请求和响应模型
+AIOps request and response models
 """
 
 from typing import Optional, List, Dict, Any
@@ -7,11 +7,11 @@ from pydantic import BaseModel, Field
 
 
 class AIOpsRequest(BaseModel):
-    """AIOps 诊断请求"""
+    """AIOps diagnosis request"""
     
     session_id: Optional[str] = Field(
         default="default",
-        description="会话ID，用于追踪诊断历史"
+        description="Session ID used to trace diagnosis history"
     )
     
     class Config:
@@ -23,7 +23,7 @@ class AIOpsRequest(BaseModel):
 
 
 class AlertInfo(BaseModel):
-    """告警信息"""
+    """Alert information"""
     alertname: str
     severity: str
     instance: str
@@ -32,7 +32,7 @@ class AlertInfo(BaseModel):
 
 
 class DiagnosisResponse(BaseModel):
-    """诊断响应（非流式）"""
+    """Diagnosis response, non-streaming"""
     
     code: int = 200
     message: str = "success"
@@ -50,8 +50,8 @@ class DiagnosisResponse(BaseModel):
                         "severity": "critical"
                     },
                     "diagnosis": {
-                        "root_cause": "数据库连接池耗尽",
-                        "recommendations": ["扩容数据库连接池", "优化SQL查询"]
+                        "root_cause": "Database connection pool exhausted",
+                        "recommendations": ["Increase database connection pool size", "Optimize SQL queries"]
                     }
                 }
             }

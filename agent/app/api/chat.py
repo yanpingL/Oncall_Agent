@@ -1,6 +1,6 @@
-"""对话接口
+"""Chat API
 
-提供基于 RAG Agent 的普通对话和流式对话接口
+Provides normal and streaming chat APIs based on the RAG Agent
 """
 
 import json
@@ -17,31 +17,31 @@ router = APIRouter()
 
 @router.post("/chat")
 async def chat(request: ChatRequest):
-    """快速对话接口
+    """Quick chat API
     {
         "code": 200,
         "message": "success",
         "data": {
             "success": true,
-            "answer": "回答内容",
+            "answer": "answer content",
             "errorMessage": null
         }
     }
 
     Args:
-        request: 对话请求
+        request: Chat request
 
     Returns:
-        统一格式的对话响应
+        Unified chat response format
     """
     try:
-        logger.info(f"[会话 {request.id}] 收到快速对话请求: {request.question}")
+        logger.info(f"[session {request.id}] received quick chat request: {request.question}")
         answer = await rag_agent_service.query(
             request.question,
             session_id=request.id
         )
 
-        logger.info(f"[会话 {request.id}] 快速对话完成")
+        logger.info(f"[session {request.id}] quick chat completed")
 
         return {
             "code": 200,
@@ -54,7 +54,7 @@ async def chat(request: ChatRequest):
         }
 
     except Exception as e:
-        logger.error(f"对话接口错误: {e}")
+        logger.error(f"Chat APIerror: {e}")
         return {
             "code": 500,
             "message": "error",
@@ -68,29 +68,29 @@ async def chat(request: ChatRequest):
 
 @router.post("/chat_stream")
 async def chat_stream(request: ChatRequest):
-    """流式对话接口（基于 RAG Agent，SSE）
+    """Streaming chat API based on RAG Agent and SSE
 
-    返回 SSE 格式，data 字段为 JSON：
+    Returns SSE format with the data field as JSON:
 
-    工具调用事件:
+    Tool call event:
     event: message
-    data: {"type":"tool_call","data":{"tool":"工具名","status":"start|end","input":{...}}}
+    data: {"type":"tool_call","data":{"tool":"tool name","status":"start|end","input":{...}}}
 
-    内容流式事件:
+    Content streaming event:
     event: message
-    data: {"type":"content","data":"内容块"}
+    data: {"type":"content","data":"content chunk"}
 
-    完成事件:
+    Completion event:
     event: message
-    data: {"type":"done","data":{"answer":"完整答案","tool_calls":[...]}}
+    data: {"type":"done","data":{"answer":"Complete answer","tool_calls":[...]}}
 
     Args:
-        request: 对话请求
+        request: Chat request
 
     Returns:
-        SSE 事件流
+        SSE event stream
     """
-    logger.info(f"[会话 {request.id}] 收到流式对话请求: {request.question}")
+    logger.info(f"[session {request.id}] received streaming chat request: {request.question}")
 
     async def event_generator():
         try:
@@ -98,9 +98,9 @@ async def chat_stream(request: ChatRequest):
                 chunk_type = chunk.get("type", "unknown")
                 chunk_data = chunk.get("data", None)
 
-                # 处理调试类型消息（新增）
+                # Handle debug message type, newly added
                 if chunk_type == "debug":
-                    # 调试信息，可以选择发送或忽略
+                    # Debug info can be sent or ignored
                     yield {
                         "event": "message",
                         "data": json.dumps({
@@ -110,7 +110,7 @@ async def chat_stream(request: ChatRequest):
                         }, ensure_ascii=False)
                     }
                 elif chunk_type == "tool_call":
-                    # 发送工具调用事件（可选，前端可以显示工具调用状态）
+                    # Send tool-call event, optional; frontend can show tool-call status
                     yield {
                         "event": "message",
                         "data": json.dumps({
@@ -119,7 +119,7 @@ async def chat_stream(request: ChatRequest):
                         }, ensure_ascii=False)
                     }
                 elif chunk_type == "search_results":
-                    # 发送检索结果（可选，前端可以忽略）
+                    # Send retrieval results, optional; frontend can ignore
                     yield {
                         "event": "message",
                         "data": json.dumps({
@@ -128,7 +128,7 @@ async def chat_stream(request: ChatRequest):
                         }, ensure_ascii=False)
                     }
                 elif chunk_type == "content":
-                    # 发送内容块 - 关键：data 必须是 JSON 字符串
+                    # Send content chunk; important: data must be a JSON string
                     yield {
                         "event": "message",
                         "data": json.dumps({
@@ -137,7 +137,7 @@ async def chat_stream(request: ChatRequest):
                         }, ensure_ascii=False)
                     }
                 elif chunk_type == "complete":
-                    # 发送完成信号
+                    # Send completion signal
                     yield {
                         "event": "message",
                         "data": json.dumps({
@@ -146,7 +146,7 @@ async def chat_stream(request: ChatRequest):
                         }, ensure_ascii=False)
                     }
                 elif chunk_type == "error":
-                    # 发送错误信息
+                    # Send error information
                     yield {
                         "event": "message",
                         "data": json.dumps({
@@ -155,10 +155,10 @@ async def chat_stream(request: ChatRequest):
                         }, ensure_ascii=False)
                     }
 
-            logger.info(f"[会话 {request.id}] 流式对话完成")
+            logger.info(f"[session {request.id}] streaming chat completed")
 
         except Exception as e:
-            logger.error(f"流式对话接口错误: {format_exception_chain(e)}")
+            logger.error(f"streaming chat API error: {format_exception_chain(e)}")
             yield {
                 "event": "message",
                 "data": json.dumps({
@@ -172,38 +172,38 @@ async def chat_stream(request: ChatRequest):
 
 @router.post("/chat/clear", response_model=ApiResponse)
 async def clear_session(request: ClearRequest):
-    """清空会话历史
+    """Clear session history
 
     Args:
-        request: 清空请求
+        request: clear request
 
     Returns:
-        操作结果
+        operation result
     """
     try:
         success = rag_agent_service.clear_session(request.session_id)
-        logger.info(f"清空会话: {request.session_id}, 结果: {success}")
+        logger.info(f"Clear session: {request.session_id}, result: {success}")
 
         return ApiResponse(
             status="success" if success else "error",
-            message="会话已清空" if success else "清空会话失败",
+            message="Session cleared" if success else "Failed to clear session",
             data=None
         )
 
     except Exception as e:
-        logger.error(f"清空会话错误: {e}")
+        logger.error(f"clear session error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/chat/session/{session_id}", response_model=SessionInfoResponse)
 async def get_session_info(session_id: str) -> SessionInfoResponse:
-    """查询会话历史
+    """Query session history
 
     Args:
-        session_id: 会话 ID
+        session_id: Session ID
 
     Returns:
-        会话信息
+        session info
     """
     try:
         history = rag_agent_service.get_session_history(session_id)
@@ -215,5 +215,5 @@ async def get_session_info(session_id: str) -> SessionInfoResponse:
         )
 
     except Exception as e:
-        logger.error(f"获取会话信息错误: {e}")
+        logger.error(f"get session info error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

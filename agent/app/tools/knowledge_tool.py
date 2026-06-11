@@ -1,4 +1,4 @@
-"""知识检索工具 - 从向量数据库中检索相关信息"""
+"""Knowledge retrieval tool for retrieving relevant information from the vector database"""
 
 from typing import List, Tuple
 
@@ -12,20 +12,20 @@ from app.services.vector_store_manager import vector_store_manager
 
 @tool(response_format="content_and_artifact")
 def retrieve_knowledge(query: str) -> Tuple[str, List[Document]]:
-    """从知识库中检索相关信息来回答问题
+    """Retrieve relevant information from the knowledge base to answer questions
     
-    当用户的问题涉及专业知识、文档内容或需要参考资料时，使用此工具。
+    Use this tool when the user question involves domain knowledge, document content, or references.
     
     Args:
-        query: 用户的问题或查询
+        query: User question or query
         
     Returns:
-        Tuple[str, List[Document]]: (格式化的上下文文本, 原始文档列表)
+        Tuple[str, List[Document]]: (formatted context text and original document list)
     """
     try:
-        logger.info(f"知识检索工具被调用: query='{query}'")
+        logger.info(f"Knowledge retrieval tool called: query='{query}'")
         
-        # 从向量存储中检索相关文档
+        # Retrieve relevant documents from vector store
         vector_store = vector_store_manager.get_vector_store()
         retriever = vector_store.as_retriever(
             search_kwargs={"k": config.rag_top_k}
@@ -34,38 +34,38 @@ def retrieve_knowledge(query: str) -> Tuple[str, List[Document]]:
         docs = retriever.invoke(query)
         
         if not docs:
-            logger.warning("未检索到相关文档")
-            return "没有找到相关信息。", []
+            logger.warning("No relevant documents retrieved")
+            return "No relevant information found.", []
         
-        # 格式化文档为上下文
+        # Format documents as context
         context = format_docs(docs)
         
-        logger.info(f"检索到 {len(docs)} 个相关文档")
+        logger.info(f"Retrieved {len(docs)} relevant documents")
         return context, docs
         
     except Exception as e:
-        logger.error(f"知识检索工具调用失败: {e}")
-        return f"检索知识时发生错误: {str(e)}", []
+        logger.error(f"Knowledge retrieval tool call failed: {e}")
+        return f"Error while retrieving knowledge: {str(e)}", []
 
 
 def format_docs(docs: List[Document]) -> str:
     """
-    格式化文档列表为上下文文本
+    Format document list as context text
     
     Args:
-        docs: 文档列表
+        docs: Document list
         
     Returns:
-        str: 格式化的上下文文本
+        str: Formatted context text
     """
     formatted_parts = []
     
     for i, doc in enumerate(docs, 1):
-        # 提取元数据
+        # Extract metadata
         metadata = doc.metadata
-        source = metadata.get("_file_name", "未知来源")
+        source = metadata.get("_file_name", "Unknown source")
         
-        # 提取标题信息 (如果有)
+        # Extract heading information if available
         headers = []
         for key in ["h1", "h2", "h3"]:
             if key in metadata and metadata[key]:
@@ -73,12 +73,12 @@ def format_docs(docs: List[Document]) -> str:
         
         header_str = " > ".join(headers) if headers else ""
         
-        # 构建格式化文本
-        formatted = f"【参考资料 {i}】"
+        # Build formatted text
+        formatted = f"【Reference {i}】"
         if header_str:
-            formatted += f"\n标题: {header_str}"
-        formatted += f"\n来源: {source}"
-        formatted += f"\n内容:\n{doc.page_content}\n"
+            formatted += f"\nTitle: {header_str}"
+        formatted += f"\nSource: {source}"
+        formatted += f"\nContent:\n{doc.page_content}\n"
         
         formatted_parts.append(formatted)
     

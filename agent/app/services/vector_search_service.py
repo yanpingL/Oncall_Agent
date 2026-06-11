@@ -1,4 +1,4 @@
-"""向量检索服务模块"""
+"""Vector search service module"""
 
 from typing import Any, Dict, List
 
@@ -10,7 +10,7 @@ from app.services.vector_embedding_service import vector_embedding_service
 
 
 class SearchResult:
-    """搜索结果类"""
+    """Search result class"""
 
     def __init__(
         self,
@@ -25,7 +25,7 @@ class SearchResult:
         self.metadata = metadata
 
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
+        """Convert to dictionary"""
         return {
             "id": self.id,
             "content": self.content,
@@ -35,43 +35,43 @@ class SearchResult:
 
 
 class VectorSearchService:
-    """向量检索服务 - 负责从 Milvus 中搜索相似向量"""
+    """Vector search service for searching similar vectors in Milvus"""
 
     def __init__(self):
-        """初始化向量检索服务"""
-        logger.info("向量检索服务初始化完成")
+        """Initialize vector search service"""
+        logger.info("Vector search service initialized")
 
     def search_similar_documents(self, query: str, top_k: int = 3) -> List[SearchResult]:
         """
-        搜索相似文档
+        Search similar documents
 
         Args:
-            query: 查询文本
-            top_k: 返回最相似的K个结果
+            query: Query text
+            top_k: Return the top K most similar results
 
         Returns:
-            List[SearchResult]: 搜索结果列表
+            List[SearchResult]: Search result list
 
         Raises:
-            RuntimeError: 搜索失败时抛出
+            RuntimeError: Raised when search fails
         """
         try:
-            logger.info(f"开始搜索相似文档, 查询: {query}, topK: {top_k}")
+            logger.info(f"Starting similar document search, query: {query}, topK: {top_k}")
 
-            # 1. 将查询文本向量化
+            # 1. Vectorize query text
             query_vector = vector_embedding_service.embed_query(query)
-            logger.debug(f"查询向量生成成功, 维度: {len(query_vector)}")
+            logger.debug(f"Query vector generated successfully, dimension: {len(query_vector)}")
 
-            # 2. 获取 collection
+            # 2. Get collection
             collection: Collection = milvus_manager.get_collection()
 
-            # 3. 构建搜索参数
+            # 3. Build search parameters
             search_params = {
-                "metric_type": "L2",  # 欧氏距离
+                "metric_type": "L2",  # Euclidean distance
                 "params": {"nprobe": 10},
             }
 
-            # 4. 执行搜索
+            # 4. Execute search
             results = collection.search(
                 data=[query_vector],
                 anns_field="vector",
@@ -80,25 +80,25 @@ class VectorSearchService:
                 output_fields=["id", "content", "metadata"],
             )
 
-            # 5. 解析搜索结果
+            # 5. Parse search results
             search_results = []
             for hits in results:
                 for hit in hits:
                     result = SearchResult(
                         id=hit.entity.get("id"),
                         content=hit.entity.get("content"),
-                        score=hit.distance,  # L2 距离，越小越相似
+                        score=hit.distance,  # L2 distance; lower is more similar
                         metadata=hit.entity.get("metadata", {}),
                     )
                     search_results.append(result)
 
-            logger.info(f"搜索完成, 找到 {len(search_results)} 个相似文档")
+            logger.info(f"Search completed, found {len(search_results)} similar documents")
             return search_results
 
         except Exception as e:
-            logger.error(f"搜索相似文档失败: {e}")
-            raise RuntimeError(f"搜索失败: {e}") from e
+            logger.error(f"Failed to search similar documents: {e}")
+            raise RuntimeError(f"Search failed: {e}") from e
 
 
-# 全局单例
+# Global singleton
 vector_search_service = VectorSearchService()

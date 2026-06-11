@@ -1,6 +1,6 @@
-"""SuperBizAgent Python 版本
+"""SuperBizAgent Python version
 
-基于 LangChain 的智能业务代理系统
+Intelligent business agent system based on LangChain
 """
 
 __version__ = "1.0.0"

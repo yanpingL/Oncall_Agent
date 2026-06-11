@@ -1,6 +1,6 @@
-"""腾讯云 CLS (Cloud Log Service) MCP Server
+"""Tencent Cloud CLS (Cloud Log Service) MCP Server
 
-本地实现的 CLS 日志服务 MCP Server，提供日志查询、检索和分析功能。
+Local CLS log service MCP server that provides log query, retrieval, and analysis features.
 """
 
 import logging
@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from fastmcp import FastMCP
 
-# 配置日志
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -21,48 +21,48 @@ mcp = FastMCP("CLS")
 
 
 def log_tool_call(func):
-    """装饰器：记录工具调用的日志，包括方法名、参数和返回状态"""
+    """Decorator: log tool calls, including method name, arguments, and return status"""
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         method_name = func.__name__
 
-        # 记录调用信息
+        # Log call information
         logger.info(f"=" * 80)
-        logger.info(f"调用方法: {method_name}")
+        logger.info(f"Method called: {method_name}")
 
-        # 记录参数（排除self等）
+        # Log arguments (excluding self, etc.)
         if kwargs:
-            # 使用 json.dumps 格式化参数，处理可能的序列化错误
+            # Format arguments with json.dumps and handle possible serialization errors
             try:
                 params_str = json.dumps(kwargs, ensure_ascii=False, indent=2)
             except (TypeError, ValueError):
                 params_str = str(kwargs)
-            logger.info(f"参数信息:\n{params_str}")
+            logger.info(f"Arguments:\n{params_str}")
         else:
-            logger.info("参数信息: 无")
+            logger.info("Arguments: none")
 
-        # 执行方法
+        # Execute method
         try:
             result = func(*args, **kwargs)
 
-            # 记录返回状态
-            logger.info(f"返回状态: SUCCESS")
+            # Log return status
+            logger.info(f"Return status: SUCCESS")
 
-            # 记录返回结果摘要（避免日志过长）
+            # Log a result summary to avoid overly long logs
             if isinstance(result, dict):
                 summary = {k: v if not isinstance(v, (list, dict)) else f"<{type(v).__name__} with {len(v)} items>"
                           for k, v in list(result.items())[:5]}
-                logger.info(f"返回结果摘要: {json.dumps(summary, ensure_ascii=False)}")
+                logger.info(f"Result summary: {json.dumps(summary, ensure_ascii=False)}")
             else:
-                logger.info(f"返回结果: {result}")
+                logger.info(f"Result: {result}")
 
             logger.info(f"=" * 80)
             return result
 
         except Exception as e:
-            # 记录错误状态
-            logger.error(f"返回状态: ERROR")
-            logger.error(f"错误信息: {str(e)}")
+            # Log error status
+            logger.error(f"Return status: ERROR")
+            logger.error(f"Error message: {str(e)}")
             logger.error(f"=" * 80)
             raise
 
@@ -70,14 +70,14 @@ def log_tool_call(func):
 
 
 def parse_time_or_default(time_str: Optional[str], default_offset_hours: int = 0) -> datetime:
-    """解析时间字符串或返回默认时间。
+    """Parse a time string or return the default time.
 
     Args:
-        time_str: 时间字符串（格式：YYYY-MM-DD HH:MM:SS）
-        default_offset_hours: 默认时间偏移（小时）
+        time_str: Time string (format: YYYY-MM-DD HH:MM:SS)
+        default_offset_hours: Default time offset in hours
 
     Returns:
-        datetime: 解析后的时间对象
+        datetime: Parsed datetime object
     """
     if time_str:
         try:
@@ -88,14 +88,14 @@ def parse_time_or_default(time_str: Optional[str], default_offset_hours: int = 0
 
 
 def generate_time_series(base_time: datetime, minutes_offset: int) -> str:
-    """生成基于基准时间的时间字符串。
+    """Generate a time string based on the reference time.
 
     Args:
-        base_time: 基准时间
-        minutes_offset: 分钟偏移量
+        base_time: Reference time
+        minutes_offset: Minute offset
 
     Returns:
-        str: 格式化的时间字符串
+        str: Formatted time string
     """
     result_time = base_time + timedelta(minutes=minutes_offset)
     return result_time.strftime("%Y-%m-%d %H:%M:%S")
@@ -104,26 +104,26 @@ def generate_time_series(base_time: datetime, minutes_offset: int) -> str:
 @mcp.tool()
 @log_tool_call
 def get_current_timestamp() -> int:
-    """获取当前时间戳（以毫秒为单位）。
+    """Get the current timestamp in milliseconds.
     
-    此工具用于获取标准的毫秒时间戳，可用于：
-    1. 作为 search_log 的 end_time 参数（查询到现在）
-    2. 计算历史时间点作为 start_time 参数
+    This tool returns a standard millisecond timestamp and can be used to:
+    1. Use as the search_log end_time argument to query up to now
+    2. Calculate a historical timestamp for the start_time argument
     
     Returns:
-        int: 当前时间戳（毫秒），例如: 1708012345000
+        int: current timestamp in milliseconds, for example: 1708012345000
     
-    使用示例:
-        # 获取当前时间
+    Usage examples:
+        # Get the current time
         current = get_current_timestamp()
         
-        # 计算15分钟前的时间
+        # Calculate the time 15 minutes ago
         fifteen_min_ago = current - (15 * 60 * 1000)
         
-        # 计算1小时前的时间
+        # Calculate the time 1 hour ago
         one_hour_ago = current - (60 * 60 * 1000)
         
-        # 用于搜索最近15分钟的日志
+        # Use it to search logs from the last 15 minutes
         search_log(
             topic_id="topic-001",
             start_time=fifteen_min_ago,
@@ -136,22 +136,22 @@ def get_current_timestamp() -> int:
 @mcp.tool()
 @log_tool_call
 def get_region_code_by_name(region_name: str) -> Dict[str, Any]:
-    """根据地区名称搜索对应的地区参数。
+    """Find the region parameters for a region name.
 
     Args:
-        region_name: 地区名称（如：北京、上海、广州等）
+        region_name: Region name, such as Beijing, Shanghai, or Guangzhou
 
     Returns:
-        Dict: 包含地区代码和相关信息的字典
-            - region_code: 地区代码
-            - region_name: 地区名称
-            - available: 是否可用
+        Dict: Dictionary containing the region code and related information
+            - region_code: region code
+            - region_name: region name
+            - available: whether it is available
     """
-    # 模拟地区映射表（实际应该从配置或数据库读取）
+    # Mock region mapping table; in production this should come from configuration or a database
     region_mapping = {
-        "北京": {"region_code": "ap-beijing", "region_name": "北京", "available": True},
-        "上海": {"region_code": "ap-shanghai", "region_name": "上海", "available": True},
-        "广州": {"region_code": "ap-guangzhou", "region_name": "广州", "available": True},
+        "Beijing": {"region_code": "ap-beijing", "region_name": "Beijing", "available": True},
+        "Shanghai": {"region_code": "ap-shanghai", "region_name": "Shanghai", "available": True},
+        "Guangzhou": {"region_code": "ap-guangzhou", "region_name": "Guangzhou", "available": True},
     }
 
     result = region_mapping.get(region_name)
@@ -162,40 +162,40 @@ def get_region_code_by_name(region_name: str) -> Dict[str, Any]:
             "region_code": None,
             "region_name": region_name,
             "available": False,
-            "error": f"未找到地区: {region_name}"
+            "error": f"Region not found: {region_name}"
         }
 
 
 @mcp.tool()
 @log_tool_call
 def get_topic_info_by_name(topic_name: str, region_code: Optional[str] = None) -> Dict[str, Any]:
-    """根据主题名称搜索相关的主题信息。
+    """Search topic information by topic name.
 
     Args:
-        topic_name: 主题名称
-        region_code: 地区代码（可选）
+        topic_name: topic name
+        region_code: region code (optional)
 
     Returns:
-        Dict: 包含主题信息的字典
-            - topic_id: 主题ID
-            - topic_name: 主题名称
-            - region_code: 所属地区
-            - create_time: 创建时间
-            - log_count: 日志数量
+        Dict: Dictionary containing topic information
+            - topic_id: topic ID
+            - topic_name: topic name
+            - region_code: region
+            - create_time: creation time
+            - log_count: log count
     """
     mock_topics = [
         {
             "topic_id": "topic-001",
-            "topic_name": "数据同步服务日志",
+            "topic_name": "Data sync service logs",
             "service_name": "data-sync-service",
             "region_code": "ap-beijing",
             "create_time": "2024-01-01 10:00:00",
             "log_count": 0,
-            "description": "服务应用日志"
+            "description": "Service application logs"
         }
     ]
 
-    # 根据名称和地区筛选
+    # Filter by name and region
     for topic in mock_topics:
         if topic["topic_name"] == topic_name:
             if region_code is None or topic["region_code"] == region_code:
@@ -205,7 +205,7 @@ def get_topic_info_by_name(topic_name: str, region_code: Optional[str] = None) -
         "topic_id": None,
         "topic_name": topic_name,
         "region_code": region_code,
-        "error": f"未找到主题: {topic_name}"
+        "error": f"Topic not found: {topic_name}"
     }
 
 
@@ -216,61 +216,61 @@ def search_topic_by_service_name(
     region_code: Optional[str] = None,
     fuzzy: bool = True
 ) -> Dict[str, Any]:
-    """根据服务名称搜索相关的日志主题信息，支持模糊搜索。
+    """Search related log topic information by service name with fuzzy matching support.
     
-    此工具用于根据服务名称查找对应的日志主题（topic），便于后续进行日志查询。
+    This tool finds the corresponding log topic for a service name so later log queries can use it.
     
     Args:
-        service_name: 服务名称（必填）
-            示例: "data-sync-service", "sync", "data-sync"
-            说明: 当 fuzzy=True 时，支持部分匹配
+        service_name: service name (required)
+            Example: "data-sync-service", "sync", "data-sync"
+            Description: When fuzzy=True, partial matching is supported
         
-        region_code: 地区代码（可选）
-            示例: "ap-beijing", "ap-shanghai"
-            说明: 如果指定，只返回该地区的主题
+        region_code: region code (optional)
+            Example: "ap-beijing", "ap-shanghai"
+            Description: If specified, only topics in that region are returned
         
-        fuzzy: 是否启用模糊搜索（可选，默认 True）
-            True: 部分匹配，例如 "sync" 可以匹配 "data-sync-service"
-            False: 精确匹配，必须完全一致
+        fuzzy: whether fuzzy search is enabled (optional, default: True)
+            True: partial match, for example "sync" can match "data-sync-service"
+            False: exact match, must match exactly
     
     Returns:
-        Dict: 搜索结果
-            - total: 匹配到的主题数量
-            - topics: 主题列表，每个主题包含:
-                * topic_id: 主题ID（用于后续日志查询）
-                * topic_name: 主题名称
-                * service_name: 服务名称
-                * region_code: 所属地区
-                * create_time: 创建时间
-                * log_count: 日志数量
-                * description: 主题描述
-            - query: 查询条件
+        Dict: search result
+            - total: number of matched topics
+            - topics: topic list; each topic contains:
+                * topic_id: topic ID used for later log queries
+                * topic_name: topic name
+                * service_name: service name
+                * region_code: region
+                * create_time: creation time
+                * log_count: log count
+                * description: topic description
+            - query: query criteria
     
-    使用示例:
-        # 示例1: 模糊搜索（推荐）
+    Usage examples:
+        # Example1: Fuzzy search (recommended)
         search_topic_by_service_name(service_name="data-sync")
-        # 可以匹配: "data-sync-service", "data-sync-worker" 等
+        # can match: "data-sync-service", "data-sync-worker" etc.
         
-        # 示例2: 精确搜索
+        # Example2: Exact search
         search_topic_by_service_name(
             service_name="data-sync-service",
             fuzzy=False
         )
         
-        # 示例3: 指定地区搜索
+        # Example3: Search in a specified region
         search_topic_by_service_name(
             service_name="sync",
             region_code="ap-beijing"
         )
         
-        # 示例4: 查找后进行日志搜索的完整流程
-        # 步骤1: 根据服务名查找 topic
+        # Example4: Full workflow for finding a topic and then searching logs
+        # Step1: Find a topic by service name
         result = search_topic_by_service_name(service_name="data-sync-service")
         
-        # 步骤2: 获取 topic_id
+        # Step2: Get the topic_id
         topic_id = result["topics"][0]["topic_id"]  # "topic-001"
         
-        # 步骤3: 使用 topic_id 查询日志
+        # Step3: Query logs with the topic_id
         current_ts = get_current_timestamp()
         start_ts = current_ts - (15 * 60 * 1000)
         search_log(
@@ -279,55 +279,55 @@ def search_topic_by_service_name(
             end_time=current_ts
         )
     """
-    # Mock 主题数据（实际应该从配置或数据库读取）
+    # Mock topic data; in production this should come from configuration or a database
     mock_topics = [
         {
             "topic_id": "topic-001",
-            "topic_name": "数据同步服务日志",
+            "topic_name": "Data sync service logs",
             "service_name": "data-sync-service",
             "region_code": "ap-beijing",
             "create_time": "2024-01-01 10:00:00",
             "log_count": 0,
-            "description": "数据同步服务的应用日志，包含同步任务执行情况"
+            "description": "Application logs for the data sync service, including sync task execution details"
         },
         {
             "topic_id": "topic-002",
-            "topic_name": "数据同步服务错误日志",
+            "topic_name": "Data sync service error logs",
             "service_name": "data-sync-service",
             "region_code": "ap-beijing",
             "create_time": "2024-01-01 10:00:00",
             "log_count": 0,
-            "description": "数据同步服务的错误日志"
+            "description": "Error logs for the data sync service"
         },
         {
             "topic_id": "topic-003",
-            "topic_name": "API网关服务日志",
+            "topic_name": "API gateway service logs",
             "service_name": "api-gateway-service",
             "region_code": "ap-shanghai",
             "create_time": "2024-01-01 10:00:00",
             "log_count": 0,
-            "description": "API网关服务日志"
+            "description": "API gateway service logs"
         }
     ]
     
     matched_topics = []
     
-    # 搜索逻辑
+    # Search logic
     for topic in mock_topics:
-        # 地区筛选
+        # Region filter
         if region_code and topic["region_code"] != region_code:
             continue
         
-        # 服务名称匹配
+        # Service name matching
         topic_service_name = topic.get("service_name", "")
         
         if fuzzy:
-            # 模糊匹配：服务名包含查询字符串，或查询字符串包含服务名
+            # Fuzzy matching: service name contains the query string, or the query string contains the service name
             if (service_name.lower() in topic_service_name.lower() or 
                 topic_service_name.lower() in service_name.lower()):
                 matched_topics.append(topic)
         else:
-            # 精确匹配
+            # exact match
             if topic_service_name == service_name:
                 matched_topics.append(topic)
     
@@ -339,7 +339,7 @@ def search_topic_by_service_name(
             "region_code": region_code,
             "fuzzy": fuzzy
         },
-        "message": f"找到 {len(matched_topics)} 个匹配的日志主题" if matched_topics else f"未找到服务 '{service_name}' 的日志主题"
+        "message": f"Found {len(matched_topics)} matching log topics" if matched_topics else f"No log topic found for service '{service_name}'"
     }
 
 
@@ -352,90 +352,90 @@ def search_log(
     query: Optional[str] = None,
     limit: int = 100
 ) -> Dict[str, Any]:
-    """基于提供的查询参数搜索日志。
+    """Search logs using the provided query parameters.
 
     Args:
-        topic_id: 主题ID（必填）
-            示例: "topic-001"
+        topic_id: topic ID (required)
+            Example: "topic-001"
         
-        start_time: 开始时间戳，单位为毫秒（必填，int类型）
-            重要: 必须传递整数类型的毫秒时间戳
-            获取方式: 
-            1. 使用 get_current_timestamp() 工具获取当前时间戳
-            2. 计算历史时间: current_timestamp - (分钟数 * 60 * 1000)
-            示例: 
-            - 当前时间: 1708012345000
-            - 15分钟前: 1708012345000 - (15 * 60 * 1000) = 1708011445000
-            - 1小时前: 1708012345000 - (60 * 60 * 1000) = 1708008745000
+        start_time: start timestamp in milliseconds (required, int)
+            Important: must be an integer millisecond timestamp
+            How to obtain it: 
+            1. Use get_current_timestamp() to get the current timestamp
+            2. Calculate historical time: current_timestamp - (number of minutes * 60 * 1000)
+            Example: 
+            - current time: 1708012345000
+            - 15 minutes ago: 1708012345000 - (15 * 60 * 1000) = 1708011445000
+            - 1 hour ago: 1708012345000 - (60 * 60 * 1000) = 1708008745000
         
-        end_time: 结束时间戳，单位为毫秒（必填，int类型）
-            重要: 必须传递整数类型的毫秒时间戳
-            通常使用 get_current_timestamp() 工具获取当前时间作为结束时间
-            示例: 1708012345000
+        end_time: end timestamp in milliseconds (required, int)
+            Important: must be an integer millisecond timestamp
+            Usually use get_current_timestamp() to get the current time as the end time
+            Example: 1708012345000
         
-        query: 查询语句（可选，CLS 查询语法）
-            示例: "level:ERROR" 或 "message:异常"
+        query: query expression (optional, CLS query syntax)
+            Example: "level:ERROR" or "message:exception"
         
-        limit: 返回结果数量限制（默认100，可选）
+        limit: result limit (default: 100, optional)
 
     Returns:
-        Dict: 搜索结果
-            - topic_id: 主题ID
-            - start_time: 开始时间戳
-            - end_time: 结束时间戳
-            - query: 查询语句
-            - limit: 结果限制
-            - total: 实际返回的日志条数
-            - logs: 日志列表，每条日志包含:
-                * timestamp: 日志时间（格式: YYYY-MM-DD HH:MM:SS）
-                * level: 日志级别
-                * message: 日志内容
-            - took_ms: 查询耗时（毫秒）
-            - message: 查询状态消息
+        Dict: search result
+            - topic_id: topic ID
+            - start_time: start timestamp
+            - end_time: end timestamp
+            - query: query expression
+            - limit: result limit
+            - total: actual number of returned log entries
+            - logs: log list; each log entry contains:
+                * timestamp: log time (format: YYYY-MM-DD HH:MM:SS)
+                * level: log level
+                * message: log message
+            - took_ms: query latency (milliseconds)
+            - message: query status message
     
-    使用示例:
-        # 步骤1: 获取当前时间戳
-        current_ts = get_current_timestamp()  # 返回: 1708012345000
+    Usage examples:
+        # Step1: Get the current timestamp
+        current_ts = get_current_timestamp()  # returns: 1708012345000
         
-        # 步骤2: 计算开始时间（15分钟前）
+        # Step2: Calculate the start time (15 minutes ago)
         start_ts = current_ts - (15 * 60 * 1000)  # 1708011445000
         
-        # 步骤3: 搜索日志
+        # Step3: Search logs
         search_log(
             topic_id="topic-001",
-            start_time=start_ts,     # int类型: 1708011445000
-            end_time=current_ts,     # int类型: 1708012345000
+            start_time=start_ts,     # int type: 1708011445000
+            end_time=current_ts,     # int type: 1708012345000
             limit=100
         )
     """
-    # 根据 topic_id 返回不同的结果
+    # Return different results based on topic_id
     if topic_id == "topic-001":
-        # topic-001: 应用日志，动态生成 INFO 日志
+        # topic-001: application logs with dynamically generated INFO entries
         logs = []
         current_time_ms = start_time
         count = 0
 
-        # 计算最大可生成的日志条数（基于时间范围）
+        # Calculate the maximum number of logs that can be generated based on the time range
         max_logs_by_time = int((end_time - start_time) / (60 * 1000)) + 1
 
-        # 实际生成的日志数量取 limit 和时间范围内最大日志数的较小值
+        # Use the smaller value of limit and the maximum log count within the time range
         actual_limit = min(limit, max_logs_by_time)
 
         while current_time_ms <= end_time and count < actual_limit:
-            # 将毫秒时间戳转换为可读格式
+            # Convert the millisecond timestamp to a readable format
             log_time = datetime.fromtimestamp(current_time_ms / 1000)
             time_str = log_time.strftime("%Y-%m-%d %H:%M:%S")
 
             log_entry = {
                 "timestamp": time_str,
                 "level": "INFO",
-                "message": "正在同步元数据……"
+                "message": "Synchronizing metadata..."
             }
 
             logs.append(log_entry)
             count += 1
 
-            # 下一条日志时间增加1分钟（60秒 * 1000毫秒）
+            # Increase the next log timestamp by 1 minute (60 seconds * 1000 milliseconds)
             current_time_ms += 60 * 1000
 
         return {
@@ -447,10 +447,10 @@ def search_log(
             "total": len(logs),
             "logs": logs,
             "took_ms": 50,
-            "message": f"成功查询 {len(logs)} 条应用日志"
+            "message": f"Successfully queried {len(logs)} application log entries"
         }
     else:
-        # 其他 topic_id: 返回错误，表示 topic 不存在
+        # Other topic_id values return an error indicating the topic does not exist
         return {
             "topic_id": topic_id,
             "start_time": start_time,
@@ -460,8 +460,8 @@ def search_log(
             "total": 0,
             "logs": [],
             "took_ms": 0,
-            "error": f"主题不存在: {topic_id}",
-            "message": f"错误: 未找到主题 {topic_id}，请检查 topic_id 是否正确"
+            "error": f"Topic does not exist: {topic_id}",
+            "message": f"Error: Topic not found {topic_id}; please check whether the topic_id is correct"
         }
 
 

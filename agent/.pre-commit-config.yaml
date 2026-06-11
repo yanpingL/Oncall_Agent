@@ -1,24 +1,24 @@
-# Pre-commit hooks 配置
-# 在提交代码前自动运行代码格式化和检查
+# Pre-commit hooks configuration
+# Automatically run code formatting and checks before commits
 
 repos:
-  # 通用 pre-commit hooks
+  # General pre-commit hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
-      - id: trailing-whitespace        # 删除行尾空格
-      - id: end-of-file-fixer          # 确保文件以换行符结尾
-      - id: check-yaml                 # 检查 YAML 语法
-      - id: check-json                 # 检查 JSON 语法
-      - id: check-added-large-files    # 防止提交大文件
+      - id: trailing-whitespace        # Remove trailing whitespace
+      - id: end-of-file-fixer          # Ensure files end with a newline
+      - id: check-yaml                 # Check YAML syntax
+      - id: check-json                 # Check JSON syntax
+      - id: check-added-large-files    # Prevent large files from being committed
         args: ['--maxkb=1000']
-      - id: check-merge-conflict       # 检查合并冲突标记
-      - id: check-case-conflict        # 检查文件名大小写冲突
-      - id: detect-private-key         # 检测私钥泄露
-      - id: mixed-line-ending          # 统一换行符
+      - id: check-merge-conflict       # Check merge conflict markers
+      - id: check-case-conflict        # Check filename case conflicts
+      - id: detect-private-key         # Detect leaked private keys
+      - id: mixed-line-ending          # Normalize line endings
         args: ['--fix=lf']
 
-  # Python import 排序 - isort
+  # Python import sorting - isort
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
     hooks:
@@ -26,7 +26,7 @@ repos:
         name: isort (python)
         args: ["--profile", "black", "--line-length", "100"]
 
-  # Python 代码格式化 - Black
+  # Python code formatting - Black
   - repo: https://github.com/psf/black
     rev: 23.12.1
     hooks:
@@ -34,14 +34,14 @@ repos:
         language_version: python3.10
         args: ["--line-length", "100"]
 
-  # Python 代码检查 - Ruff (更快的 flake8 替代品)
+  # Python linting - Ruff (faster flake8 replacement)
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.1.9
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
 
-  # Python 代码安全检查 - Bandit
+  # Python security checks - Bandit
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.6
     hooks:
@@ -50,14 +50,14 @@ repos:
         additional_dependencies: ["bandit[toml]"]
         exclude: ^tests/
 
-  # Python docstring 格式化
+  # Python docstring formatting
   - repo: https://github.com/PyCQA/docformatter
     rev: v1.7.5
     hooks:
       - id: docformatter
         args: [--in-place, --wrap-summaries=100, --wrap-descriptions=100]
 
-  # Markdown 格式化
+  # Markdown formatting
   - repo: https://github.com/executablebooks/mdformat
     rev: 0.7.17
     hooks:
@@ -67,18 +67,18 @@ repos:
           - mdformat-black
         args: ["--wrap", "80"]
 
-  # 提交信息检查
+  # Commit message checks
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v3.13.0
     hooks:
       - id: commitizen
         stages: [commit-msg]
 
-# 配置
+# Configuration
 default_language_version:
   python: python3.10
 
-# 排除的文件和目录
+# Excluded files and directories
 exclude: |
   (?x)^(
       \.git/|
@@ -94,7 +94,7 @@ exclude: |
       \.pyc$
   )
 
-# CI 模式（可选）
+# CI mode (optional)
 ci:
   autofix_commit_msg: |
     [pre-commit.ci] auto fixes from pre-commit.com hooks

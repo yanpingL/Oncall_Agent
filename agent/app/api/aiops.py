@@ -1,5 +1,5 @@
 """
-AIOps 智能运维接口
+AIOps operations API
 """
 
 import json
@@ -16,78 +16,78 @@ router = APIRouter()
 @router.post("/aiops")
 async def diagnose_stream(request: AIOpsRequest):
     """
-    AIOps 故障诊断接口（流式 SSE）
+    AIOps fault diagnosis API, streaming SSE
 
-    **功能说明：**
-    - 自动获取当前系统的活动告警
-    - 使用 Plan-Execute-Replan 模式进行智能诊断
-    - 流式返回诊断过程和结果
+    **Function description:**
+    - Automatically fetch current active system alerts
+    - Use Plan-Execute-Replan mode for intelligent diagnosis
+    - Stream diagnosis process and results
 
-    **SSE 事件类型：**
+    **SSE Event types:**
 
-    1. `status` - 状态更新
+    1. `status` - Statusupdate
        ```json
        {
          "type": "status",
          "stage": "fetching_alerts",
-         "message": "正在获取系统告警信息..."
+         "message": "Fetching system alert information..."
        }
        ```
 
-    2. `plan` - 诊断计划制定完成
+    2. `plan` - Diagnosis plan created
        ```json
        {
          "type": "plan",
          "stage": "plan_created",
-         "message": "诊断计划已制定，共 6 个步骤",
+         "message": "Diagnosis plan created with 6 steps",
          "target_alert": {...},
-         "plan": ["步骤1: ...", "步骤2: ..."]
+         "plan": ["Step 1: ...", "Step 2: ..."]
        }
        ```
 
-    3. `step_complete` - 步骤执行完成
+    3. `step_complete` - Step completed
        ```json
        {
          "type": "step_complete",
          "stage": "step_executed",
-         "message": "步骤执行完成 (2/6)",
-         "current_step": "查询系统日志",
+         "message": "Step completed (2/6)",
+         "current_step": "query system logs",
          "result_preview": "...",
          "remaining_steps": 4
        }
        ```
 
-    4. `report` - 最终诊断报告
+    4. `report` - Final diagnosis report
        ```json
        {
          "type": "report",
          "stage": "final_report",
-         "message": "最终诊断报告已生成",
-         "report": "# 故障诊断报告\\n...",
+         "message": "Final diagnosis report generated",
+         "report": "# Fault diagnosis report\\n...",
          "evidence": {...}
        }
        ```
 
-    5. `complete` - 诊断完成
+    5. `complete` - Diagnosis completed
        ```json
        {
          "type": "complete",
          "stage": "diagnosis_complete",
-         "message": "诊断流程完成",
+         "message": "Diagnosis flow completed",
          "diagnosis": {...}
        }
        ```
 
-    6. `error` - 错误信息
+    6. `error` - error information
        ```json
        {
          "type": "error",
          "stage": "error",
-         "message": "诊断过程发生错误: ..."
+         "message": "Diagnosis process error: ..."
        }
        ```
 
-    **使用示例：**
+    **Usage example:**
     ```bash
     curl -X POST "http://localhost:9900/api/aiops" \\
       -H "Content-Type: application/json" \\
@@ -95,7 +95,7 @@ async def diagnose_stream(request: AIOpsRequest):
       --no-buffer
     ```
 
-    **前端使用示例：**
+    **Frontend usage example:**
     ```javascript
     const eventSource = new EventSource('/api/aiops');
 
@@ -103,50 +103,50 @@ async def diagnose_stream(request: AIOpsRequest):
       const data = JSON.parse(event.data);
 
       if (data.type === 'plan') {
-        console.log('诊断计划:', data.plan);
+        console.log('Diagnosis plan:', data.plan);
       } else if (data.type === 'step_complete') {
-        console.log('步骤完成:', data.current_step);
+        console.log('Step completed:', data.current_step);
       } else if (data.type === 'report') {
-        console.log('最终报告:', data.report);
+        console.log('Final report:', data.report);
       } else if (data.type === 'complete') {
-        console.log('诊断完成');
+        console.log('Diagnosis completed');
         eventSource.close();
       }
     };
     ```
 
     Args:
-        request: AIOps 诊断请求
+        request: AIOps diagnosis request
 
     Returns:
-        SSE 事件流
+        SSE event stream
     """
     session_id = request.session_id or "default"
-    logger.info(f"[会话 {session_id}] 收到 AIOps 诊断请求（流式）")
+    logger.info(f"[session {session_id}] received AIOps diagnosis request (streaming)")
 
     async def event_generator():
         try:
             async for event in aiops_service.diagnose(session_id=session_id):
-                # 发送事件
+                # Send event
                 yield {
                     "event": "message",
                     "data": json.dumps(event, ensure_ascii=False)
                 }
 
-                # 如果是完成或错误事件，结束流
+                # End stream if event is complete or error
                 if event.get("type") in ["complete", "error"]:
                     break
 
-            logger.info(f"[会话 {session_id}] AIOps 诊断流式响应完成")
+            logger.info(f"[session {session_id}] AIOps diagnosis streaming response completed")
 
         except Exception as e:
-            logger.error(f"[会话 {session_id}] AIOps 诊断流式响应异常: {e}", exc_info=True)
+            logger.error(f"[session {session_id}] AIOps diagnosis streaming response exception: {e}", exc_info=True)
             yield {
                 "event": "message",
                 "data": json.dumps({
                     "type": "error",
                     "stage": "exception",
-                    "message": f"诊断异常: {str(e)}"
+                    "message": f"Diagnosis exception: {str(e)}"
                 }, ensure_ascii=False)
             }
 

@@ -1,12 +1,12 @@
-"""智能运维监控 MCP Server
+"""Intelligent operations monitoring MCP Server
 
-本地实现的监控服务 MCP Server，提供：
-- 监控数据查询（CPU、内存、磁盘、网络等）
-- 进程信息查询
-- 历史工单查询
-- 服务信息查询
+Local monitoring MCP server that provides:
+- Monitoring data queries (CPU, memory, disk, network, etc.)
+- Process information queries
+- Historical ticket queries
+- Service information queries
 
-用于支持运维 Agent 的故障排查场景。
+Supports troubleshooting scenarios for the operations agent.
 """
 
 import logging
@@ -17,7 +17,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from fastmcp import FastMCP
 
-# 配置日志
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -28,48 +28,48 @@ mcp = FastMCP("Monitor")
 
 
 def log_tool_call(func):
-    """装饰器：记录工具调用的日志，包括方法名、参数和返回状态"""
+    """Decorator: log tool calls, including method name, arguments, and return status"""
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         method_name = func.__name__
 
-        # 记录调用信息
+        # Log call information
         logger.info(f"=" * 80)
-        logger.info(f"调用方法: {method_name}")
+        logger.info(f"Method called: {method_name}")
 
-        # 记录参数（排除self等）
+        # Log arguments (excluding self, etc.)
         if kwargs:
-            # 使用 json.dumps 格式化参数，处理可能的序列化错误
+            # Format arguments with json.dumps and handle possible serialization errors
             try:
                 params_str = json.dumps(kwargs, ensure_ascii=False, indent=2)
             except (TypeError, ValueError):
                 params_str = str(kwargs)
-            logger.info(f"参数信息:\n{params_str}")
+            logger.info(f"Arguments:\n{params_str}")
         else:
-            logger.info("参数信息: 无")
+            logger.info("Arguments: none")
 
-        # 执行方法
+        # Execute method
         try:
             result = func(*args, **kwargs)
 
-            # 记录返回状态
-            logger.info(f"返回状态: SUCCESS")
+            # Log return status
+            logger.info(f"Return status: SUCCESS")
 
-            # 记录返回结果摘要（避免日志过长）
+            # Log a result summary to avoid overly long logs
             if isinstance(result, dict):
                 summary = {k: v if not isinstance(v, (list, dict)) else f"<{type(v).__name__} with {len(v)} items>"
                           for k, v in list(result.items())[:5]}
-                logger.info(f"返回结果摘要: {json.dumps(summary, ensure_ascii=False)}")
+                logger.info(f"Result summary: {json.dumps(summary, ensure_ascii=False)}")
             else:
-                logger.info(f"返回结果: {result}")
+                logger.info(f"Result: {result}")
 
             logger.info(f"=" * 80)
             return result
 
         except Exception as e:
-            # 记录错误状态
-            logger.error(f"返回状态: ERROR")
-            logger.error(f"错误信息: {str(e)}")
+            # Log error status
+            logger.error(f"Return status: ERROR")
+            logger.error(f"Error message: {str(e)}")
             logger.error(f"=" * 80)
             raise
 
@@ -77,38 +77,38 @@ def log_tool_call(func):
 
 
 # ============================================================
-# 辅助函数
+# Helper functions
 # ============================================================
 
 def parse_time_or_default(time_str: Optional[str], default_offset_hours: int = 0) -> datetime:
-    """解析时间字符串或返回默认时间。
+    """Parse a time string or return the default time.
 
     Args:
-        time_str: 时间字符串（格式：YYYY-MM-DD HH:MM:SS）
-        default_offset_hours: 默认时间偏移（小时）
+        time_str: Time string (format: YYYY-MM-DD HH:MM:SS)
+        default_offset_hours: Default time offset in hours
 
     Returns:
-        datetime: 解析后的时间对象
+        datetime: Parsed datetime object
     """
     if time_str:
         try:
             return datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
         except ValueError:
             pass
-    # 返回默认时间（当前时间 + 偏移）
+    # Return the default time (current time plus offset)
     return datetime.now() + timedelta(hours=default_offset_hours)
 
 
 def generate_time_series(base_time: datetime, minutes_offset: int, format_str: str = "%Y-%m-%d %H:%M:%S") -> str:
-    """生成时间序列字符串。
+    """Generate a time-series string.
 
     Args:
-        base_time: 基准时间
-        minutes_offset: 分钟偏移量
-        format_str: 时间格式字符串
+        base_time: Reference time
+        minutes_offset: Minute offset
+        format_str: Time format string
 
     Returns:
-        str: 格式化的时间字符串
+        str: Formatted time string
     """
     result_time = base_time + timedelta(minutes=minutes_offset)
     return result_time.strftime(format_str)
@@ -118,7 +118,7 @@ def generate_time_series(base_time: datetime, minutes_offset: int, format_str: s
 
 
 # ============================================================
-# 监控数据查询工具
+# Monitoring data query tools
 # ============================================================
 
 @mcp.tool()
@@ -129,51 +129,51 @@ def query_cpu_metrics(
     end_time: Optional[str] = None,
     interval: str = "1m"
 ) -> Dict[str, Any]:
-    """查询服务的 CPU 使用率监控数据。
+    """Query CPU usage metrics for a service.
 
     Args:
-        service_name: 服务名称（必填）
-            示例: "data-sync-service"
+        service_name: service name(required)
+            Example: "data-sync-service"
         
-        start_time: 开始时间（可选，字符串类型）
-            格式: "YYYY-MM-DD HH:MM:SS"
-            示例: "2026-02-14 10:00:00"
-            默认值: 如果不传，默认为当前时间的1小时前
-            注意: 必须使用字符串格式，而非时间戳
+        start_time: start time(optional,string type)
+            Format: "YYYY-MM-DD HH:MM:SS"
+            Example: "2026-02-14 10:00:00"
+            Default: defaults to one hour before the current time if omitted
+            Note: must be a string, not a timestamp
         
-        end_time: 结束时间（可选，字符串类型）
-            格式: "YYYY-MM-DD HH:MM:SS"
-            示例: "2026-02-14 11:00:00"
-            默认值: 如果不传，默认为当前时间
-            注意: 必须使用字符串格式，而非时间戳
+        end_time: end time(optional,string type)
+            Format: "YYYY-MM-DD HH:MM:SS"
+            Example: "2026-02-14 11:00:00"
+            Default: defaults to the current time if omitted
+            Note: must be a string, not a timestamp
         
-        interval: 数据聚合间隔（可选）
-            可选值: "1m" (1分钟), "5m" (5分钟), "1h" (1小时)
-            默认值: "1m"
-            说明: 控制数据点的时间间隔
+        interval: data aggregation interval(optional)
+            Allowed values: "1m" (1minutes), "5m" (5minutes), "1h" (1hours)
+            Default: "1m"
+            Description: controls the time interval between data points
 
     Returns:
-        Dict: CPU 监控数据
-            - service_name: 服务名称
-            - metric_name: 指标名称 (cpu_usage_percent)
-            - interval: 数据聚合间隔
-            - data_points: 数据点列表，每个点包含:
-                * timestamp: 时间点（格式: HH:MM）
-                * value: CPU 使用率百分比
-            - statistics: 统计信息
-                * average: 平均值
-                * max: 最大值
-                * min: 最小值
-            - alert: 告警信息（如有）
-                * triggered: 是否触发告警
-                * threshold: 告警阈值
-                * message: 告警消息
+        Dict: CPU monitoring data
+            - service_name: service name
+            - metric_name: metric name (cpu_usage_percent)
+            - interval: data aggregation interval
+            - data_points: data point list,each point contains:
+                * timestamp: timestamp(Format: HH:MM)
+                * value: CPU usage percentage
+            - statistics: statistics
+                * average: average
+                * max: maximum
+                * min: minimum
+            - alert: alert informationif present
+                * triggered: whether the alert was triggered
+                * threshold: alert threshold
+                * message: alert message
     
-    使用示例:
-        # 示例1: 使用默认时间（最近1小时）
+    Usage examples:
+        # Example1: Use the default time(the last hour)
         query_cpu_metrics(service_name="data-sync-service")
         
-        # 示例2: 指定时间范围
+        # Example2: Specify a time range
         query_cpu_metrics(
             service_name="data-sync-service",
             start_time="2026-02-14 10:00:00",
@@ -181,48 +181,48 @@ def query_cpu_metrics(
             interval="5m"
         )
         
-        # 示例3: 只指定开始时间（结束时间自动为当前时间）
+        # Example3: Specify only the start time; end time defaults to the current time
         query_cpu_metrics(
             service_name="data-sync-service",
             start_time="2026-02-14 10:00:00"
         )
     """
-    # 解析时间参数
+    # Parse time arguments
     start_dt = parse_time_or_default(start_time, default_offset_hours=-1)
     end_dt = parse_time_or_default(end_time, default_offset_hours=0)
     
-    # 解析间隔时间（interval: 1m, 5m, 1h 等）
-    interval_minutes = 1  # 默认 1 分钟
+    # Parse interval duration(interval: 1m, 5m, 1h etc.)
+    interval_minutes = 1  # default: 1 minute
     if interval.endswith('m'):
         interval_minutes = int(interval[:-1])
     elif interval.endswith('h'):
         interval_minutes = int(interval[:-1]) * 60
 
-    # 动态生成 CPU 使用率数据：从低到高逐渐增长
+    # Dynamically generate CPU usage data that gradually increases from low to high
     data_points = []
     current_time = start_dt
     time_index = 0
 
-    # 初始 CPU 使用率（10%）
+    # Initial CPU usage (10%)
     base_cpu = 10.0
 
     while current_time <= end_dt:
-        # CPU 使用率逐渐升高的算法：
-        # - 前几个数据点保持在 10% 左右
-        # - 然后开始快速上升
-        # - 最终达到 95% 左右
+        # Algorithm for gradually increasing CPU usage:
+        # - The first few data points stay around 10%
+        # - Then the value starts rising quickly
+        # - Eventually reaches around 95%
 
         if time_index < 3:
-            # 初始阶段：10% 左右波动
+            # Initial phase: fluctuates around 10%
             cpu_value = base_cpu + (time_index * 0.5)
         else:
-            # 上升阶段：使用指数增长模型
+            # Growth phase: use an exponential growth model
             growth_factor = (time_index - 2) * 8.5
             cpu_value = min(base_cpu + growth_factor, 96.0)
 
-        # 添加一些随机波动（±2%）
+        # Add small random fluctuation (+/-2%)
         cpu_value = round(cpu_value + random.uniform(-2, 2), 1)
-        cpu_value = max(0, min(100, cpu_value))  # 确保在 0-100 范围内
+        cpu_value = max(0, min(100, cpu_value))  # Clamp to the 0-100 range
 
         data_point = {
             "timestamp": current_time.strftime("%H:%M"),
@@ -232,18 +232,18 @@ def query_cpu_metrics(
 
         data_points.append(data_point)
 
-        # 下一个时间点
+        # Next timestamp
         current_time += timedelta(minutes=interval_minutes)
         time_index += 1
 
-    # 计算统计信息
+    # Calculate statistics
     if data_points:
         values = [d["value"] for d in data_points]
         avg_value = round(sum(values) / len(values), 2)
         max_value = max(values)
         min_value = min(values)
 
-        # 检测是否有 CPU 突增（超过 80%）
+        # Detect whether there is a CPU spike above 80%
         spike_detected = max_value > 80.0
 
         return {
@@ -261,7 +261,7 @@ def query_cpu_metrics(
             "alert_info": {
                 "triggered": spike_detected,
                 "threshold": 80.0,
-                "message": "CPU 使用率持续超过 80% 阈值" if spike_detected else "CPU 使用率正常"
+                "message": "CPU usage continuously exceeds the 80% threshold" if spike_detected else "CPU usage is normal"
             }
         }
     else:
@@ -282,52 +282,52 @@ def query_memory_metrics(
     end_time: Optional[str] = None,
     interval: str = "1m"
 ) -> Dict[str, Any]:
-    """查询服务的内存使用监控数据。
+    """Query memory usage metrics for a service.
 
     Args:
-        service_name: 服务名称（必填）
-            示例: "data-sync-service"
+        service_name: service name(required)
+            Example: "data-sync-service"
         
-        start_time: 开始时间（可选，字符串类型）
-            格式: "YYYY-MM-DD HH:MM:SS"
-            示例: "2026-02-14 10:00:00"
-            默认值: 如果不传，默认为当前时间的1小时前
-            注意: 必须使用字符串格式，而非时间戳
+        start_time: start time(optional,string type)
+            Format: "YYYY-MM-DD HH:MM:SS"
+            Example: "2026-02-14 10:00:00"
+            Default: defaults to one hour before the current time if omitted
+            Note: must be a string, not a timestamp
         
-        end_time: 结束时间（可选，字符串类型）
-            格式: "YYYY-MM-DD HH:MM:SS"
-            示例: "2026-02-14 11:00:00"
-            默认值: 如果不传，默认为当前时间
-            注意: 必须使用字符串格式，而非时间戳
+        end_time: end time(optional,string type)
+            Format: "YYYY-MM-DD HH:MM:SS"
+            Example: "2026-02-14 11:00:00"
+            Default: defaults to the current time if omitted
+            Note: must be a string, not a timestamp
         
-        interval: 数据聚合间隔（可选）
-            可选值: "1m" (1分钟), "5m" (5分钟), "1h" (1小时)
-            默认值: "1m"
+        interval: data aggregation interval(optional)
+            Allowed values: "1m" (1minutes), "5m" (5minutes), "1h" (1hours)
+            Default: "1m"
 
     Returns:
-        Dict: 内存监控数据
-            - service_name: 服务名称
-            - metric_name: 指标名称 (memory_usage_percent)
-            - interval: 数据聚合间隔
-            - data_points: 数据点列表，每个点包含:
-                * timestamp: 时间点（格式: HH:MM）
-                * value: 内存使用率百分比
-                * used_gb: 已使用内存（GB）
-                * total_gb: 总内存（GB）
-            - statistics: 统计信息
-                * average: 平均值
-                * max: 最大值
-                * min: 最小值
-            - alert: 告警信息（如有）
-                * triggered: 是否触发告警
-                * threshold: 告警阈值
-                * message: 告警消息
+        Dict: Memory monitoring data
+            - service_name: service name
+            - metric_name: metric name (memory_usage_percent)
+            - interval: data aggregation interval
+            - data_points: data point list,each point contains:
+                * timestamp: timestamp(Format: HH:MM)
+                * value: Memory usage percentage
+                * used_gb: Used memory (GB)
+                * total_gb: Total memory (GB)
+            - statistics: statistics
+                * average: average
+                * max: maximum
+                * min: minimum
+            - alert: alert informationif present
+                * triggered: whether the alert was triggered
+                * threshold: alert threshold
+                * message: alert message
     
-    使用示例:
-        # 示例1: 使用默认时间（最近1小时）
+    Usage examples:
+        # Example1: Use the default time(the last hour)
         query_memory_metrics(service_name="data-sync-service")
         
-        # 示例2: 指定时间范围
+        # Example2: Specify a time range
         query_memory_metrics(
             service_name="data-sync-service",
             start_time="2026-02-14 10:00:00",
@@ -335,45 +335,45 @@ def query_memory_metrics(
             interval="5m"
         )
     """
-    # 解析时间参数
+    # Parse time arguments
     start_dt = parse_time_or_default(start_time, default_offset_hours=-1)
     end_dt = parse_time_or_default(end_time, default_offset_hours=0)
     
-    # 解析间隔时间（interval: 1m, 5m, 1h 等）
-    interval_minutes = 1  # 默认 1 分钟
+    # Parse interval duration(interval: 1m, 5m, 1h etc.)
+    interval_minutes = 1  # default: 1 minute
     if interval.endswith('m'):
         interval_minutes = int(interval[:-1])
     elif interval.endswith('h'):
         interval_minutes = int(interval[:-1]) * 60
     
-    # 动态生成内存使用率数据：从低到高逐渐增长
+    # Dynamically generate memory usage data that gradually increases from low to high
     data_points = []
     current_time = start_dt
     time_index = 0
     
-    # 初始内存使用率（30%）
+    # Initial memory usage (30%)
     base_memory = 30.0
-    total_gb = 8.0  # 总内存 8GB
+    total_gb = 8.0  # Total memory: 8 GB
     
     while current_time <= end_dt:
-        # 内存使用率逐渐升高的算法：
-        # - 前几个数据点保持在 30% 左右
-        # - 然后开始逐步上升
-        # - 最终达到 85% 左右
+        # Algorithm for gradually increasing memory usage:
+        # - The first few data points stay around 30%
+        # - Then the value starts rising gradually
+        # - Eventually reaches around 85%
         
         if time_index < 3:
-            # 初始阶段：30% 左右波动
+            # Initial phase: fluctuates around 30%
             memory_value = base_memory + (time_index * 1.0)
         else:
-            # 上升阶段：使用线性增长模型（内存增长比 CPU 慢）
+            # Growth phase: use a linear growth model (memory grows more slowly than CPU)
             growth_factor = (time_index - 2) * 5.5
             memory_value = min(base_memory + growth_factor, 85.0)
         
-        # 添加一些随机波动（±1%）
+        # Add small random fluctuation (+/-1%)
         memory_value = round(memory_value + random.uniform(-1, 1), 1)
-        memory_value = max(0, min(100, memory_value))  # 确保在 0-100 范围内
+        memory_value = max(0, min(100, memory_value))  # Clamp to the 0-100 range
         
-        # 计算已使用内存（GB）
+        # Calculate used memory (GB)
         used_gb = round((memory_value / 100.0) * total_gb, 2)
         
         data_point = {
@@ -385,18 +385,18 @@ def query_memory_metrics(
         
         data_points.append(data_point)
         
-        # 下一个时间点
+        # Next timestamp
         current_time += timedelta(minutes=interval_minutes)
         time_index += 1
     
-    # 计算统计信息
+    # Calculate statistics
     if data_points:
         values = [d["value"] for d in data_points]
         avg_value = round(sum(values) / len(values), 2)
         max_value = max(values)
         min_value = min(values)
         
-        # 检测是否有内存压力（超过 70%）
+        # Detect memory pressure above 70%
         memory_pressure = max_value > 70.0
         
         return {
@@ -414,7 +414,7 @@ def query_memory_metrics(
             "alert_info": {
                 "triggered": memory_pressure,
                 "threshold": 70.0,
-                "message": "内存使用率超过 70% 阈值，存在内存压力" if memory_pressure else "内存使用率正常"
+                "message": "Memory usage exceeds the 70% threshold; memory pressure exists" if memory_pressure else "Memory usage is normal"
             }
         }
     else:
@@ -424,12 +424,12 @@ def query_memory_metrics(
             "interval": interval,
             "data_points": [],
             "statistics": {},
-            "error": "时间范围无效或没有生成数据点"
+            "error": "Invalid time range or no data points were generated"
         }
 
 
 
 
 if __name__ == "__main__":
-    # 使用 streamable-http 模式，运行在 8004 端口
+    # Run in streamable-http mode on port 8004
     mcp.run(transport="streamable-http", host="127.0.0.1", port=8004, path="/mcp")

@@ -1,6 +1,6 @@
 """
-通用 Plan-Execute-Replan 服务
-基于 LangGraph 官方教程实现
+Generic Plan-Execute-Replan service.
+Implemented based on the official LangGraph tutorial.
 """
 
 from typing import AsyncGenerator, Dict, Any
@@ -12,57 +12,57 @@ from app.agent.aiops import PlanExecuteState, planner, executor, replanner
 from app.services.vector_index_service import vector_index_service
 
 
-# 节点名称常量
+# Node name constants
 NODE_PLANNER = "planner"
 NODE_EXECUTOR = "executor"
 NODE_REPLANNER = "replanner"
 
 
 class AIOpsService:
-    """通用 Plan-Execute-Replan 服务"""
+    """Generic Plan-Execute-Replan service."""
 
     def __init__(self):
-        """初始化服务"""
+        """Initialize the service."""
         self.checkpointer = MemorySaver()
         self.graph = self._build_graph()
-        logger.info("Plan-Execute-Replan Service 初始化完成")
+        logger.info("Plan-Execute-Replan service initialized")
 
     def _build_graph(self):
-        """构建 Plan-Execute-Replan 工作流"""
-        logger.info("构建工作流图...")
+        """Build the Plan-Execute-Replan workflow."""
+        logger.info("Building workflow graph...")
 
-        # 创建状态图
+        # Create the state graph.
         workflow = StateGraph(PlanExecuteState)
 
-        # 添加节点
+        # Add nodes.
         # Adds a node named [NODE_PLANNER], when this node runs, it calls the [planner] function
-        workflow.add_node(NODE_PLANNER, planner)      # 制定计划
-        workflow.add_node(NODE_EXECUTOR, executor)  # 执行步骤
-        workflow.add_node(NODE_REPLANNER, replanner)  # 重新规划
+        workflow.add_node(NODE_PLANNER, planner)      # Create a plan
+        workflow.add_node(NODE_EXECUTOR, executor)  # Execute a step
+        workflow.add_node(NODE_REPLANNER, replanner)  # Replan
 
         # The first step of the graph is the planner
         workflow.set_entry_point(NODE_PLANNER)
 
-        # 定义边
+        # Define edges.
         workflow.add_edge(NODE_PLANNER, NODE_EXECUTOR)     # planner -> executor
         workflow.add_edge(NODE_EXECUTOR, NODE_REPLANNER)   # executor -> replanner
 
-        # replanner 的条件边
+        # Conditional edges from replanner.
         def should_continue(state: PlanExecuteState) -> str:
-            """判断是否继续执行"""
-            # 如果已经生成了最终响应，结束
+            """Decide whether execution should continue."""
+            # Stop if the final response has already been generated.
             if state.get("response"):
-                logger.info("已生成最终响应，结束流程")
+                logger.info("Final response has been generated; ending workflow")
                 return END
 
-            # 如果还有计划步骤，继续执行
+            # Continue if there are remaining plan steps.
             plan = state.get("plan", [])
             if plan:
-                logger.info(f"继续执行，剩余 {len(plan)} 个步骤")
+                logger.info(f"Continuing execution with {len(plan)} remaining steps")
                 return NODE_EXECUTOR
 
-            # 计划为空但没有响应，返回 END 生成响应
-            logger.info("计划执行完毕，生成最终响应")
+            # No remaining plan and no response: finish the workflow.
+            logger.info("Plan execution completed; preparing final response")
             return END
 
         """
@@ -84,10 +84,10 @@ class AIOpsService:
             }
         )
 
-        # 编译工作流
+        # Compile the workflow.
         compiled_graph = workflow.compile(checkpointer=self.checkpointer)
 
-        logger.info("工作流图构建完成")
+        logger.info("Workflow graph built")
         return compiled_graph
 
     async def execute(
@@ -96,19 +96,19 @@ class AIOpsService:
         session_id: str = "default"
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
-        执行 Plan-Execute-Replan 流程
+        Execute the Plan-Execute-Replan workflow.
 
         Args:
-            user_input: 用户的任务描述
-            session_id: 会话ID
+            user_input: User task description
+            session_id: Session ID
 
         Yields:
-            Dict[str, Any]: 流式事件
+            Dict[str, Any]: Streaming events
         """
-        logger.info(f"[会话 {session_id}] 开始执行任务: {user_input}")
+        logger.info(f"[session {session_id}] Starting task: {user_input}")
 
         try:
-            # 初始化状态
+            # Initialize state.
             initial_state: PlanExecuteState = {
                 "input": user_input,
                 "plan": [],
@@ -116,7 +116,7 @@ class AIOpsService:
                 "response": ""
             }
 
-            # 流式执行工作流
+            # Stream workflow execution.
             config_dict = {
                 "configurable": {
                     "thread_id": session_id
@@ -128,12 +128,12 @@ class AIOpsService:
                 config=config_dict,
                 stream_mode="updates"
             ):
-                # 解析事件
+                # Parse events.
                 # node_output is the output of the corresponing node function
                 for node_name, node_output in event.items():
-                    logger.info(f"节点 '{node_name}' 输出事件")
+                    logger.info(f"Node '{node_name}' emitted an event")
 
-                    # 根据节点类型生成不同的事件
+                    # Format different events based on node type.
                     if node_name == NODE_PLANNER:
                         yield self._format_planner_event(node_output)
 
@@ -147,29 +147,29 @@ class AIOpsService:
             final_state = self.graph.get_state(config_dict)
             final_response = ""
 
-            # 安全地获取响应（处理 values 可能为 None 的情况）
+            # Safely get the response because values can be None.
             # fial_state.values contains the actual state fields
             if final_state and final_state.values:
                 final_response = final_state.values.get("response", "")
 
             knowledge_index = self._store_final_report(final_response, session_id)
 
-            # 发送完成事件
+            # Send completion event.
             yield {
                 "type": "complete",
                 "stage": "complete",
-                "message": "任务执行完成",
+                "message": "Task execution completed",
                 "response": final_response,
             }
 
-            logger.info(f"[会话 {session_id}] 任务执行完成")
+            logger.info(f"[session {session_id}] Task execution completed")
 
         except Exception as e:
-            logger.error(f"[会话 {session_id}] 任务执行失败: {e}", exc_info=True)
+            logger.error(f"[session {session_id}] Task execution failed: {e}", exc_info=True)
             yield {
                 "type": "error",
                 "stage": "error",
-                "message": f"任务执行出错: {str(e)}"
+                "message": f"Task execution error: {str(e)}"
             }
 
     async def diagnose(
@@ -177,98 +177,98 @@ class AIOpsService:
         session_id: str = "default"
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
-        AIOps 诊断接口（兼容旧接口）
+        AIOps diagnosis interface, compatible with the legacy API.
 
         Args:
-            session_id: 会话ID
+            session_id: Session ID
 
         Yields:
-            Dict[str, Any]: 诊断过程的流式事件
+            Dict[str, Any]: Streaming diagnosis events
         """
-        # 使用固定的 AIOps 任务描述
+        # Use a fixed AIOps task description.
         from textwrap import dedent
-        aiops_task = dedent("""诊断当前系统是否存在告警，如果存在告警请详细分析告警原因并生成诊断报告，诊断报告输出格式要求：
+        aiops_task = dedent("""Diagnose whether the current system has active alerts. If alerts exist, analyze their causes in detail and generate a diagnosis report using the following Markdown format:
                 ```
-                # 告警分析报告
+                # Alert Analysis Report
 
                 ---
 
-                ## 📋 活跃告警清单
+                ## Active Alert List
 
-                | 告警名称 | 级别 | 目标服务 | 首次触发时间 | 最新触发时间 | 状态 |
+                | Alert Name | Severity | Target Service | First Triggered At | Latest Triggered At | Status |
                 |---------|------|----------|-------------|-------------|------|
-                | [告警1名称] | [级别] | [服务名] | [时间] | [时间] | 活跃 |
-                | [告警2名称] | [级别] | [服务名] | [时间] | [时间] | 活跃 |
+                | [Alert 1 name] | [Severity] | [Service name] | [Time] | [Time] | Active |
+                | [Alert 2 name] | [Severity] | [Service name] | [Time] | [Time] | Active |
 
                 ---
 
-                ## 🔍 告警根因分析1 - [告警名称]
+                ## Root Cause Analysis 1 - [Alert Name]
 
-                ### 告警详情
-                - **告警级别**: [级别]
-                - **受影响服务**: [服务名]
-                - **持续时间**: [X分钟]
+                ### Alert Details
+                - **Severity**: [Severity]
+                - **Affected Service**: [Service name]
+                - **Duration**: [X minutes]
 
-                ### 症状描述
-                [根据监控指标描述症状]
+                ### Symptoms
+                [Describe symptoms based on monitoring metrics]
 
-                ### 日志证据
-                [引用查询到的关键日志]
+                ### Log Evidence
+                [Quote key logs retrieved from tools]
 
-                ### 根因结论
-                [基于证据得出的根本原因]
-
-                ---
-
-                ## 🛠️ 处理方案执行1 - [告警名称]
-
-                ### 已执行的排查步骤
-                1. [步骤1]
-                2. [步骤2]
-
-                ### 处理建议
-                [给出具体的处理建议]
-
-                ### 预期效果
-                [说明预期的效果]
+                ### Root Cause Conclusion
+                [Root cause derived from evidence]
 
                 ---
 
-                ## 🔍 告警根因分析2 - [告警名称]
-                [如果有第2个告警，重复上述格式]
+                ## Remediation Plan 1 - [Alert Name]
+
+                ### Investigation Steps Performed
+                1. [Step 1]
+                2. [Step 2]
+
+                ### Recommendations
+                [Provide concrete remediation recommendations]
+
+                ### Expected Outcome
+                [Explain the expected outcome]
 
                 ---
 
-                ## 📊 结论
+                ## Root Cause Analysis 2 - [Alert Name]
+                [If a second alert exists, repeat the same structure]
 
-                ### 整体评估
-                [总结所有告警的整体情况]
+                ---
 
-                ### 关键发现
-                - [发现1]
-                - [发现2]
+                ## Conclusion
 
-                ### 后续建议
-                1. [建议1]
-                2. [建议2]
+                ### Overall Assessment
+                [Summarize all alerts]
 
-                ### 风险评估
-                [评估当前风险等级和影响范围]
+                ### Key Findings
+                - [Finding 1]
+                - [Finding 2]
+
+                ### Follow-up Recommendations
+                1. [Recommendation 1]
+                2. [Recommendation 2]
+
+                ### Risk Assessment
+                [Assess current risk level and impact scope]
                 ```
 
-                **重要提醒**：
-                - 最终输出必须是纯 Markdown 文本，不要包含 JSON 结构
-                - 所有内容必须基于工具查询的真实数据，严禁编造
-                - 如果某个步骤失败，在结论中如实说明，不要跳过""")
+                **Important reminders**:
+                - The final output must be pure Markdown text and must not contain a JSON structure.
+                - All content must be based on real data returned by tools. Do not fabricate facts.
+                - If any step fails, state it honestly in the conclusion instead of skipping it.""")
 
         async for event in self.execute(aiops_task, session_id):
-            # 转换事件格式以兼容旧的 API
+            # Convert event format for the legacy API.
             if event.get("type") == "complete":
-                # 将 response 包装为 diagnosis 格式
+                # Wrap response in the diagnosis format.
                 yield {
                     "type": "complete",
                     "stage": "diagnosis_complete",
-                    "message": "诊断流程完成",
+                    "message": "Diagnosis completed",
                     "diagnosis": {
                         "status": "completed",
                         "report": event.get("response", ""),
@@ -278,9 +278,9 @@ class AIOpsService:
                 yield event
 
     def _store_final_report(self, final_response: str, session_id: str) -> Dict[str, Any]:
-        """保存并索引最终诊断报告。"""
+        """Save and index the final diagnosis report."""
         if not final_response or not final_response.strip():
-            logger.warning(f"[会话 {session_id}] 最终报告为空，跳过知识库写入")
+            logger.warning(f"[session {session_id}] Final report is empty; skipping knowledge-base write")
             return {
                 "success": False,
                 "skipped": True,
@@ -292,14 +292,14 @@ class AIOpsService:
                 report=final_response,
                 session_id=session_id,
             )
-            logger.info(f"[会话 {session_id}] 最终诊断报告已写入知识库: {file_path}")
+            logger.info(f"[session {session_id}] Final diagnosis report written to knowledge base: {file_path}")
             return {
                 "success": True,
                 "skipped": False,
                 "file_path": file_path,
             }
         except Exception as e:
-            logger.error(f"[会话 {session_id}] 最终诊断报告写入知识库失败: {e}", exc_info=True)
+            logger.error(f"[session {session_id}] Failed to write final diagnosis report to knowledge base: {e}", exc_info=True)
             return {
                 "success": False,
                 "skipped": False,
@@ -307,12 +307,12 @@ class AIOpsService:
             }
 
     def _format_planner_event(self, state: Dict | None) -> Dict:
-        """格式化 Planner 节点事件"""
+        """Format a Planner node event."""
         if not state:
             return {
                 "type": "status",
                 "stage": "planner",
-                "message": "规划节点执行中"
+                "message": "Planner node is running"
             }
 
         plan = state.get("plan", [])
@@ -320,17 +320,17 @@ class AIOpsService:
         return {
             "type": "plan",
             "stage": "plan_created",
-            "message": f"执行计划已制定，共 {len(plan)} 个步骤",
+            "message": f"Execution plan created with {len(plan)} steps",
             "plan": plan
         }
 
     def _format_executor_event(self, state: Dict | None) -> Dict:
-        """格式化 Executor 节点事件"""
+        """Format an Executor node event."""
         if not state:
             return {
                 "type": "status",
                 "stage": "executor",
-                "message": "执行节点运行中"
+                "message": "Executor node is running"
             }
 
         plan = state.get("plan", [])
@@ -348,7 +348,7 @@ class AIOpsService:
             return {
                 "type": "step_complete",
                 "stage": "step_executed",
-                "message": f"步骤执行完成，剩余 {len(plan)} 个步骤",
+                "message": f"Step executed; {len(plan)} steps remaining",
                 "current_step": last_step,
                 "remaining_steps": len(plan)
             }
@@ -356,35 +356,35 @@ class AIOpsService:
             return {
                 "type": "status",
                 "stage": "executor",
-                "message": "开始执行步骤"
+                "message": "Starting step execution"
             }
 
     def _format_replanner_event(self, state: Dict | None) -> Dict:
-        """格式化 Replanner 节点事件"""
+        """Format a Replanner node event."""
         if not state:
             return {
                 "type": "status",
                 "stage": "replanner",
-                "message": "评估节点运行中"
+                "message": "Replanner node is running"
             }
 
         response = state.get("response", "")
         plan = state.get("plan", [])
 
         if response:
-            # 已生成最终响应
+            # Final response has been generated.
             return {
                 "type": "report",
                 "stage": "final_report",
-                "message": "最终报告已生成",
+                "message": "Final report generated",
                 "report": response
             }
         else:
-            # 重新规划
+            # Replanning.
             return {
                 "type": "status",
                 "stage": "replanner",
-                "message": f"评估完成，{'继续执行剩余步骤' if plan else '准备生成最终响应'}",
+                "message": f"Evaluation completed; {'continuing remaining steps' if plan else 'preparing final response'}",
                 "remaining_steps": len(plan)
             }
 

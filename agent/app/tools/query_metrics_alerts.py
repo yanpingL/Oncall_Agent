@@ -1,8 +1,8 @@
-"""Prometheus 告警查询工具
+"""Prometheus alert query tool
 
-通过 Prometheus HTTP API `GET /api/v1/alerts` 拉取当前规则产生的告警列表
-（含 pending / firing 等状态）。每条告警由「完整 labels」唯一标识，与 Prometheus
-文档一致；不得仅用 `alertname` 去重，否则多实例同名规则会被错误合并。
+Fetch alerts produced by current rules through Prometheus HTTP API GET /api/v1/alerts
+including pending/firing states. Each alert is uniquely identified by full labels and matches Prometheus
+documentation; do not deduplicate only by alertname, or same-name rules on multiple instances may be merged incorrectly.
 """
 
 from __future__ import annotations
@@ -17,15 +17,15 @@ from loguru import logger
 
 from app.config import config
 
-# Prometheus Alerts API 相对 base URL 的路径（与 Query API 的 /api/v1/query 并列）
+# Prometheus Alerts API path relative to base URL, alongside Query API /api/v1/query
 ALERTS_API_PATH = "/api/v1/alerts"
 
-# 常见 label：在简化输出中带出，便于扫一眼定位服务/实例/级别（不存在则省略）
+# Common labels included in simplified output for quick service/instance/severity identification; omitted when absent
 COMMON_LABEL_KEYS = ("alertname", "severity", "instance", "job", "namespace", "pod")
 
 
 def _parse_active_at(active_at_str: str) -> datetime | None:
-    """将 Prometheus 返回的 activeAt（RFC3339 或带 Z 后缀）解析为 UTC 时间。"""
+    """Parse Prometheus activeAt, RFC3339 or Z-suffixed, as UTC time."""
     if not active_at_str:
         return None
     try:
@@ -39,7 +39,7 @@ def _parse_active_at(active_at_str: str) -> datetime | None:
 
 
 def _labels_identity(labels: dict[str, Any]) -> str:
-    """告警唯一键：完整 labels 的 JSON（键排序），用于去重或合并重复项。
+    """Alert unique key: full labels as sorted-key JSON, used for deduplication or merging duplicates.
     This converts labels to JSON with sorted keys.
     Why sorted keys? These two dicts are logically the same:
     {"alertname": "HighCPU", "instance": "a"}
@@ -52,7 +52,7 @@ def _labels_identity(labels: dict[str, Any]) -> str:
 
 
 def calculate_duration(active_at_str: str) -> str:
-    """根据 activeAt 计算相对当前 UTC 的已持续时长（人类可读短文本）。"""
+    """Compute human-readable duration since activeAt relative to current UTC."""
     active_at = _parse_active_at(active_at_str)
     if active_at is None:
         return "unknown"
@@ -70,9 +70,9 @@ def calculate_duration(active_at_str: str) -> str:
 
 
 def query_prometheus_alerts_api() -> tuple[dict[str, Any], str | None]:
-    """请求 `GET {prometheus_base_url}/api/v1/alerts`。
+    """Request GET {prometheus_base_url}/api/v1/alerts.
 
-    返回 (JSON 体, 错误信息)。成功时第二项为 None；HTTP 或 JSON 解析失败时第一项为空 dict。
+    Return (JSON body, error message). On success the second item is None; on HTTP or JSON parse failure the first item is an empty dict.
     """
     base_url = config.prometheus_base_url.rstrip("/")
     api_url = f"{base_url}{ALERTS_API_PATH}"
@@ -92,7 +92,7 @@ def query_prometheus_alerts_api() -> tuple[dict[str, Any], str | None]:
 
 
 def _pick_common_labels(labels: dict[str, Any]) -> dict[str, Any]:
-    """从 labels 中提取常用维度，减少 Agent 阅读整表 labels 的成本。"""
+    """Extract common dimensions from labels to reduce the cost for the Agent to read the full label table."""
     out: dict[str, Any] = {}
     for k in COMMON_LABEL_KEYS:
         # Skips [alertname], because the simplified alert already has an [alert_name] field
@@ -105,9 +105,9 @@ def _pick_common_labels(labels: dict[str, Any]) -> dict[str, Any]:
 
 
 def _simplify_alerts(result: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, int]]:
-    """将 Prometheus `data.alerts` 转为简化列表，并按 activeAt 从新到旧排序。
+    """Convert Prometheus data.alerts to a simplified list and sort by activeAt descending.
 
-    返回 (simplified_alerts, state_counts)。
+    Return (simplified_alerts, state_counts).
     Prometheus normally returns:
     {
         "status": "success",
@@ -130,7 +130,7 @@ def _simplify_alerts(result: dict[str, Any]) -> tuple[list[dict[str, Any]], dict
         return [], {}
 
     simplified: list[dict[str, Any]] = []
-    # 若上游偶发重复推送完全相同 labels 的条目，只保留一条（按 labels 身份去重）
+    # If upstream occasionally emits duplicate entries with identical labels, keep only one by label identity
     seen_identity: set[str] = set()
     state_counts: dict[str, int] = {}
 
@@ -168,7 +168,7 @@ def _simplify_alerts(result: dict[str, Any]) -> tuple[list[dict[str, Any]], dict
             }
         )
 
-    # 「最新」：按 activeAt 降序；无法解析的时间排在最后，便于人工扫列表
+    # Newest first: sort by activeAt descending; unparsable times go last for easier human scanning
     def sort_key(item: dict[str, Any]) -> tuple[int, float]:
         dt = _parse_active_at(str(item.get("active_at", "")))
         if dt is None:
@@ -182,21 +182,21 @@ def _simplify_alerts(result: dict[str, Any]) -> tuple[list[dict[str, Any]], dict
 
 @tool
 def query_prometheus_alerts() -> str:
-    """查询 Prometheus 服务端当前活动告警（HTTP GET /api/v1/alerts）。
+    """Query current active alerts from Prometheus server via HTTP GET /api/v1/alerts.
 
-    适用场景：用户关心「有没有告警」「哪些规则在 firing/pending」「最近触发了什么告警」
-    「排查监控告警」「和 Prometheus 告警规则相关的现状」等运维/可观测性问题；无需用户
-    提供参数，直接调用即可拉取服务端已聚合的告警列表。
+    Use cases: user asks whether alerts exist, which rules are firing/pending, or what triggered recently
+    operations/observability questions about investigating monitoring alerts or current Prometheus alert-rule state; user does not need to
+    provide parameters; call directly to fetch server-aggregated alerts.
 
-    行为说明：向配置项 `prometheus_base_url` 指向的 Prometheus 拉取告警；结果按激活时间
-    从新到旧排序；每条包含 alert 名称、labels、常见维度摘要、描述/摘要注解、状态与
-    持续时长等。返回 JSON 字符串，含 success、alerts、state_counts 等字段。
+    Behavior: fetch alerts from Prometheus configured by prometheus_base_url; results are sorted by activation time
+    newest to oldest; each item includes alert name, labels, common-dimension summary, description/summary annotations, status and
+    duration. Returns a JSON string containing success, alerts, state_counts, and related fields.
 
-    注意：这是 Prometheus 内置告警 API，不是执行 PromQL 指标查询，也不是 Alertmanager
-    的通知/静默接口；若需查指标曲线请用 MCP 或其它指标工具。
+    Note: this is the Prometheus built-in alerts API, not a PromQL metric query and not Alertmanager
+    notification/silence API; use MCP or other metric tools for metric curves.
 
     Returns:
-        str: JSON 字符串。成功时含告警列表与状态统计；失败时含 success=false 与 error。
+        str: JSON string. On success contains alert list and state counts; on failure contains success=false and error.
     """
     result, err = query_prometheus_alerts_api()
     if err:
@@ -222,7 +222,7 @@ def query_prometheus_alerts() -> str:
         "alerts": simplified,
         "state_counts": state_counts,
         "total": len(simplified),
-        "message": f"已获取 {len(simplified)} 条告警（按 activeAt 从新到旧），状态分布: {state_counts}",
+        "message": f"Fetched {len(simplified)} alerts sorted by activeAt descending; state distribution: {state_counts}",
     }
     logger.info("Prometheus alerts query completed: {} alerts, states={}", len(simplified), state_counts)
     return json.dumps(out, ensure_ascii=False, indent=2)
