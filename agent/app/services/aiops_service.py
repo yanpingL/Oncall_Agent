@@ -9,6 +9,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from loguru import logger
 
 from app.agent.aiops import PlanExecuteState, planner, executor, replanner
+from app.services.vector_index_service import vector_index_service
 
 
 # 节点名称常量
@@ -151,12 +152,14 @@ class AIOpsService:
             if final_state and final_state.values:
                 final_response = final_state.values.get("response", "")
 
+            knowledge_index = self._store_final_report(final_response, session_id)
+
             # 发送完成事件
             yield {
                 "type": "complete",
                 "stage": "complete",
                 "message": "任务执行完成",
-                "response": final_response
+                "response": final_response,
             }
 
             logger.info(f"[会话 {session_id}] 任务执行完成")
@@ -268,11 +271,40 @@ class AIOpsService:
                     "message": "诊断流程完成",
                     "diagnosis": {
                         "status": "completed",
-                        "report": event.get("response", "")
-                    }
+                        "report": event.get("response", ""),
+                    },
                 }
             else:
                 yield event
+
+    def _store_final_report(self, final_response: str, session_id: str) -> Dict[str, Any]:
+        """保存并索引最终诊断报告。"""
+        if not final_response or not final_response.strip():
+            logger.warning(f"[会话 {session_id}] 最终报告为空，跳过知识库写入")
+            return {
+                "success": False,
+                "skipped": True,
+                "reason": "empty_report",
+            }
+
+        try:
+            file_path = vector_index_service.index_aiops_report(
+                report=final_response,
+                session_id=session_id,
+            )
+            logger.info(f"[会话 {session_id}] 最终诊断报告已写入知识库: {file_path}")
+            return {
+                "success": True,
+                "skipped": False,
+                "file_path": file_path,
+            }
+        except Exception as e:
+            logger.error(f"[会话 {session_id}] 最终诊断报告写入知识库失败: {e}", exc_info=True)
+            return {
+                "success": False,
+                "skipped": False,
+                "error": str(e),
+            }
 
     def _format_planner_event(self, state: Dict | None) -> Dict:
         """格式化 Planner 节点事件"""
