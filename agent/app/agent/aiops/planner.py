@@ -3,6 +3,7 @@ Planner 节点：制定执行计划
 基于 LangGraph 官方教程实现
 """
 
+import re
 from textwrap import dedent
 from typing import Dict, Any, List
 from langchain_core.prompts import ChatPromptTemplate
@@ -33,6 +34,31 @@ class Plan(BaseModel):
     steps: List[str] = Field(
         description="完成任务所需的不同步骤。这些步骤应该按顺序执行，每一步都建立在前一步的基础上。"
     )
+
+
+def _normalize_plan_steps(plan_steps: List[str]) -> List[str]:
+    """Split a single multi-step blob into individual numbered steps when needed."""
+    split_steps: List[str] = []
+    for raw_step in plan_steps:
+        if not isinstance(raw_step, str):
+            continue
+        step = raw_step.strip()
+        if not step or step.startswith("description_used_by_reasoning"):
+            continue
+
+        markers = list(re.finditer(r"(?m)(?=^\s*步骤\s*\d+\s*[：:])", step))
+        if len(markers) <= 1:
+            split_steps.append(step)
+            continue
+
+        for index, marker in enumerate(markers):
+            start = marker.start()
+            end = markers[index + 1].start() if index + 1 < len(markers) else len(step)
+            part = step[start:end].strip()
+            if part:
+                split_steps.append(part)
+
+    return split_steps
 
 
 # Planner 提示词
@@ -157,6 +183,8 @@ async def planner(state: PlanExecuteState) -> Dict[str, Any]:
         else:
             # 如果返回的是字典，提取 steps 字段
             plan_steps = plan_result.get("steps", [])  # type: ignore
+
+        plan_steps = _normalize_plan_steps(plan_steps)
 
         logger.info(f"计划已生成，共 {len(plan_steps)} 个步骤")
         # enumerate() is a built-in function that returns a tuple containing a count (from start=1 by default) and the value

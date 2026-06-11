@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from pathlib import Path
+import re
 from typing import Any, Dict, Optional
 
 from loguru import logger
@@ -169,6 +170,63 @@ class VectorIndexService:
         except Exception as e:
             logger.error(f"索引文件失败: {file_path}, 错误: {e}")
             raise RuntimeError(f"索引文件失败: {e}") from e
+
+    def index_aiops_report(self, report: str, session_id: str) -> str:
+        """
+        将 AIOps 最终诊断报告保存为 Markdown，并写入向量知识库。
+
+        Args:
+            report: AIOps Agent 生成的 Markdown 报告
+            session_id: 会话 ID，用于生成可追踪文件名
+
+        Returns:
+            str: 已保存并索引的 Markdown 文件路径
+        """
+        if not report or not report.strip():
+            raise ValueError("AIOps 诊断报告不能为空")
+
+        created_at = datetime.now().isoformat(timespec="seconds")
+        safe_session_id = self._sanitize_filename_part(session_id or "default")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        report_dir = Path(self.upload_path) / "generated_reports"
+        report_dir.mkdir(parents=True, exist_ok=True)
+
+        file_path = report_dir / f"aiops_report_{safe_session_id}_{timestamp}.md"
+        markdown_content = self._build_aiops_report_markdown(
+            report=report,
+            session_id=session_id,
+            created_at=created_at,
+        )
+
+        file_path.write_text(markdown_content, encoding="utf-8")
+        logger.info(f"AIOps 诊断报告已保存为 Markdown: {file_path}")
+
+        self.index_single_file(str(file_path))
+        return str(file_path)
+
+    def _build_aiops_report_markdown(
+        self,
+        report: str,
+        session_id: str,
+        created_at: str,
+    ) -> str:
+        """为生成报告添加轻量元数据，保留正文 Markdown 结构。"""
+        metadata = (
+            "---\n"
+            "document_type: aiops_report\n"
+            "source: aiops_agent\n"
+            f"session_id: {session_id or 'default'}\n"
+            f"created_at: {created_at}\n"
+            "---\n\n"
+        )
+        return metadata + report.strip() + "\n"
+
+    def _sanitize_filename_part(self, value: str) -> str:
+        """生成适合作为文件名片段的字符串。"""
+        sanitized = re.sub(r"[^a-zA-Z0-9_-]+", "_", value.strip())
+        sanitized = sanitized.strip("_")
+        return sanitized[:80] or "default"
 
 
 # 全局单例

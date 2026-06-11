@@ -12,7 +12,6 @@
 
 from langchain_openai import ChatOpenAI
 from app.config import config
-from loguru import logger
 
 
 class LLMFactory:
@@ -29,13 +28,20 @@ class LLMFactory:
         base_url: str | None = None,
         api_key: str | None = None,
     ) -> ChatOpenAI:
-        model = model or config.dashscope_model
-        base_url = base_url or LLMFactory.DASHSCOPE_BASE_URL
-        api_key = api_key or config.dashscope_api_key
 
-        # 参考：https://help.aliyun.com/zh/model-studio/getting-started/models
-        extra_body = {}
-        extra_body["stream"] = streaming
+        provider = config.llm_provider.lower()
+
+        if provider == "openai":
+            model = model or config.openai_model
+            base_url = base_url or config.openai_base_url
+            api_key = api_key or config.openai_api_key
+            extra_body = None
+
+        else:
+            model = model or config.dashscope_model
+            base_url = base_url or LLMFactory.DASHSCOPE_BASE_URL
+            api_key = api_key or config.dashscope_api_key
+            extra_body = {"stream": streaming}
 
         llm = ChatOpenAI(
             model=model,
