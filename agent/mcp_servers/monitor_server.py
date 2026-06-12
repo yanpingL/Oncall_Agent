@@ -16,6 +16,7 @@ import random
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from fastmcp import FastMCP
+from app.core.prometheus_alerts import get_prometheus_alerts_summary
 
 # Configure logging
 logging.basicConfig(
@@ -120,6 +121,18 @@ def generate_time_series(base_time: datetime, minutes_offset: int, format_str: s
 # ============================================================
 # Monitoring data query tools
 # ============================================================
+
+@mcp.tool()
+@log_tool_call
+def query_prometheus_alerts() -> Dict[str, Any]:
+    """Query current active alerts from the configured Prometheus or AMP workspace.
+
+    Returns:
+        Dict: Simplified Prometheus alert data, including alert list, state counts, total count,
+        and error information when the query fails.
+    """
+    return get_prometheus_alerts_summary()
+
 
 @mcp.tool()
 @log_tool_call
@@ -432,4 +445,4 @@ def query_memory_metrics(
 
 if __name__ == "__main__":
     # Run in streamable-http mode on port 8004
-    mcp.run(transport="streamable-http", host="127.0.0.1", port=8004, path="/mcp")
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=8004, path="/mcp")

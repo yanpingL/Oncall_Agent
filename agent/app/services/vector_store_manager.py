@@ -22,10 +22,12 @@ class VectorStoreManager:
         """Initialize vector store manager"""
         self.vector_store = None
         self.collection_name = COLLECTION_NAME
-        self._initialize_vector_store()
 
     def _initialize_vector_store(self):
         """Initialize Milvus VectorStore"""
+        if self.vector_store is not None:
+            return self.vector_store
+
         try:
             # A connection must be established before PyMilvus/langchain_milvus accesses Collection,
             # otherwise ConnectionNotExistException: should create connection first can occur.
@@ -33,8 +35,7 @@ class VectorStoreManager:
             _ = milvus_manager.connect()
 
             connection_args = {
-                "host": config.milvus_host,
-                "port": config.milvus_port,
+                "uri": f"http://{config.milvus_host}:{config.milvus_port}",
             }
 
             # Create LangChain Milvus VectorStore
@@ -55,6 +56,7 @@ class VectorStoreManager:
                 f"VectorStore initialized successfully: {config.milvus_host}:{config.milvus_port}, "
                 f"collection: {self.collection_name}"
             )
+            return self.vector_store
 
         except Exception as e:
             logger.error(f"VectorStore initialization failed: {e}")
@@ -71,6 +73,7 @@ class VectorStoreManager:
             List[str]: Document ID list
         """
         try:
+            vector_store = self.get_vector_store()
             import time
             import uuid
             start_time = time.time()
@@ -80,7 +83,7 @@ class VectorStoreManager:
 
             # LangChain Milvus add_documents automatically calls embedding_function
             # and processes in batches for better performance
-            result_ids = self.vector_store.add_documents(documents, ids=ids)
+            result_ids = vector_store.add_documents(documents, ids=ids)
 
             elapsed = time.time() - start_time
             logger.info(
@@ -127,6 +130,8 @@ class VectorStoreManager:
         Returns:
             Milvus: VectorStore instance
         """
+        if self.vector_store is None:
+            self._initialize_vector_store()
         return self.vector_store
 
     def similarity_search(self, query: str, k: int = 3) -> List[Document]:
@@ -141,7 +146,8 @@ class VectorStoreManager:
             List[Document]: Relevant document list
         """
         try:
-            docs = self.vector_store.similarity_search(query, k=k)
+            vector_store = self.get_vector_store()
+            docs = vector_store.similarity_search(query, k=k)
             logger.debug(f"Similarity search completed: query='{query}', result count={len(docs)}")
             return docs
         except Exception as e:

@@ -41,6 +41,19 @@ logs/
 uploads/
 *.tmp
 
+# Secrets and private keys
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Real cloud deployment files with account IDs, ARNs, private IPs, or live URLs.
+# Commit sanitized *.template.json files instead.
+agent/ecs/*.json
+!agent/ecs/*.template.json
+agent/static/vercel.json
+!agent/static/vercel.template.json
+
 # Local data volumes
 volumes/
 

@@ -10,6 +10,20 @@ from loguru import logger
 router = APIRouter()
 
 
+@router.get("/live")
+async def liveness_check():
+    """Lightweight liveness check for load balancers and container health checks."""
+    return {
+        "code": 200,
+        "message": "Service is alive",
+        "data": {
+            "service": config.app_name,
+            "version": config.app_version,
+            "status": "alive",
+        },
+    }
+
+
 @router.get("/health")
 async def health_check():
     

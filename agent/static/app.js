@@ -1,7 +1,7 @@
 // SuperBizAgent frontend app
 class SuperBizAgentApp {
     constructor() {
-        this.apiBaseUrl = 'http://localhost:9900/api';
+        this.apiBaseUrl = '/api';
         this.currentMode = 'quick'; // 'quick' or 'stream'
         this.sessionId = this.generateSessionId();
         this.isStreaming = false;
@@ -439,7 +439,7 @@ class SuperBizAgentApp {
         
         try {
             // Fetch session history from backend
-            const response = await fetch(`/api/chat/session/${historyId}`);
+            const response = await fetch(`${this.apiBaseUrl}/chat/session/${historyId}`);
             if (response.ok) {
                 const data = await response.json();
                 const backendHistory = data.history || [];
@@ -521,7 +521,7 @@ class SuperBizAgentApp {
     async deleteChatHistory(historyId) {
         try {
             // Call backend API to clear session
-            const response = await fetch('/api/chat/clear', {
+            const response = await fetch(`${this.apiBaseUrl}/chat/clear`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
