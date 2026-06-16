@@ -17,8 +17,9 @@ Enterprise AI chat and operations assistant with RAG knowledge retrieval and AIO
 - **Vector Database**: Milvus vector database
 - **Tool Protocol**: MCP (Model Context Protocol)
 
+## Project Structure
 <details>
-<summary><h2>Project Structure</h2></summary>
+<summary><h3>Folder Tree</h3></summary>
 
 ```text
 agent/
