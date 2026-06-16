@@ -10,24 +10,30 @@ Enterprise AI chat and operations assistant with RAG knowledge retrieval and AIO
 - 🌐 **Web Interface** - Modern UI supporting multiple conversation modes: quick Q&A and streaming chat
 - 🔌 **MCP Integration** - Integrated tools for log queries and monitoring data
 
-## Tech Stack
+### Tech Stack
 
 - **Framework**: FastAPI, LangChain, LangGraph
 - **LLM**: (OpenAI)GPT-5.4-nano or other OpenAI-compatible chat models
 - **Vector Database**: Milvus vector database
 - **Tool Protocol**: MCP (Model Context Protocol)
 
-### Quick start Locally
+### Functional Architecture
 
-## Requirements
+![Functional Architecture](assets/system_architecture_diagram_english_v3.svg)
+
+<details>
+<summary><h2>Quick start Locally</h2>
+</summary>
+
+### Requirements
 
 - Docker or Docker Desktop
 - OpenAI API key or DashScope API key
 
-## Local Docker Stack
+### Local Docker Stack
 This launch method is intended to be repeatable locally without access to the AWS account. The local profile runs the backend, MCP servers, Milvus, Attu, demo CLS logs, and a demo Prometheus server through Docker Compose.
 
-## First Run
+### First Run
 
 ```bash
 cd agent
@@ -47,12 +53,6 @@ Then start the full stack:
 make local-up
 ```
 
-Then open:
-
-```bash
-http://localhost:9900
-```
-
 This runs:
 
 ```text
@@ -65,7 +65,13 @@ attu         Milvus web UI
 minio/etcd   Milvus dependencies
 ```
 
-## URLs
+Then open:
+
+```bash
+http://localhost:9900
+```
+
+### URLs
 
 ```text
 Web UI/API: http://localhost:9900
@@ -81,72 +87,7 @@ Stop the stack with:
 make local-down
 ```
 
-## Logs
-
-```bash
-make local-logs
-```
-
-## Functional Architecture
-
-```mermaid
-flowchart BT
-    subgraph storage["Knowledge Storage Layer"]
-        doc1["Service 1 Business Integration Guide"]
-        doc2["Service 2 Business Integration Guide"]
-        doc3["Service 3 Business Integration Guide"]
-        alert1["Service 1 Alert Handling Guide"]
-        alert2["Service 2 Alert Handling Guide"]
-        alert3["Service 3 Alert Handling Guide"]
-        ticket1["Service 1 Historical Ticket Records"]
-        ticket2["Service 2 Historical Ticket Records"]
-        ticket3["Service 3 Historical Ticket Records"]
-        vector["Vector Database"]
-        doc1 --> vector
-        doc2 --> vector
-        doc3 --> vector
-        alert1 --> vector
-        alert2 --> vector
-        alert3 --> vector
-        ticket1 --> vector
-        ticket2 --> vector
-        ticket3 --> vector
-    end
-
-    subgraph core["Core Component Service Layer"]
-        loader["Loader"]
-        indexer["Indexer"]
-        retriever["Retriever"]
-        transformer["Transformer"]
-        chatModel["Chat Model"]
-        prompt["Prompt"]
-        tool["Tool"]
-        mcp["MCP"]
-    end
-
-    subgraph agents["Agent Business Layer"]
-        conversation["Conversation Agent"]
-        aiops["AIOps Agent"]
-        knowledge["Knowledge Base Agent"]
-        other["Other Agents"]
-    end
-
-    subgraph api["API Access Layer"]
-        chat["/api/chat"]
-        chatStream["/api/chat_stream"]
-        upload["/api/upload"]
-        aiopsApi["/api/aiops"]
-    end
-
-    storage --> core
-    core --> agents
-    conversation --> chat
-    conversation --> chatStream
-    knowledge --> upload
-    aiops --> aiopsApi
-```
-
-## Local Runtime Architecture
+### Local Runtime Architecture
 
 ```text
 Browser
@@ -165,7 +106,7 @@ vector-database.yml
 docker-compose.local.yml
 ```
 
-## Notes
+### Notes
 
 The local Prometheus alert is intentionally always firing. It lets the AIOps
 diagnosis flow demonstrate real alert retrieval without requiring AWS Managed
@@ -175,10 +116,10 @@ The local CLS MCP service runs with `CLS_MODE=demo`, so log search tools read
 from `demo-data/cls_logs.json` instead of CloudWatch Logs. The demo timestamps
 are made relative to the current time at query time, so recent-window searches
 continue to return useful sample incidents.
+</details>
 
 
-
-### Live Demo deployed on AWS 
+## Live Demo deployed on AWS 
 
 - Frontend: https://static-rho-six.vercel.app
 - Backend health: http://oncall-agent-alb-859528003.ap-southeast-2.elb.amazonaws.com/live
@@ -186,7 +127,7 @@ continue to return useful sample incidents.
 The Vercel frontend rewrites `/api/*` requests to the AWS backend.
 
 
-## API
+### API
 
 | Feature | Method | Path | Description |
 |---------|--------|------|----------------------|
@@ -196,7 +137,7 @@ The Vercel frontend rewrites `/api/*` requests to the AWS backend.
 | File upload | POST | `/api/upload` | Upload and index documents |
 | Health check | GET | `/health` | Service health |
 
-## Example
+### Example
 
 ```bash
 curl -X POST "http://localhost:9900/api/chat"   -H "Content-Type: application/json"   -d '{"Id":"session-123","Question":"Hello"}'
@@ -204,7 +145,7 @@ curl -X POST "http://localhost:9900/api/chat"   -H "Content-Type: application/js
 curl -X POST "http://localhost:9900/api/aiops"   -H "Content-Type: application/json"   -d '{"session_id":"session-123"}'   --no-buffer
 ```
 
-## Common Commands
+### Common Commands
 
 ```bash
 make local-up          # Start full local Docker stack
@@ -213,14 +154,14 @@ make local-logs        # View local Docker logs
 make local-status      # Check local Docker services
 ```
 
-## AIOps Flow
+### AIOps Flow
 
 1. Planner creates a diagnosis plan.
 2. Executor calls local and MCP tools.
 3. Replanner decides whether to continue, adjust the plan, or respond.
 4. The final report is generated as Markdown and stored in the knowledge base.
 
-## Troubleshooting
+### Troubleshooting
 
 Check logs:
 
@@ -244,7 +185,7 @@ Restart Milvus:
 docker compose -f vector-database.yml restart
 ```
 
-## Cloud Architecture
+### Cloud Architecture
 
 ```text
 Vercel static frontend
