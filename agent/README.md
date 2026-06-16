@@ -118,12 +118,97 @@ The loop continues until no more tool calls are needed
 </details>
 
 
-
+## Project Launch 
 <details>
-<summary><h2>Quick Start Locally</h2>
+<summary><h3>Live Demo deployed on AWS</h3>
 </summary>
 
-####
+```text
+- Frontend: https://static-rho-six.vercel.app
+- Backend health: http://oncall-agent-alb-859528003.ap-southeast-2.elb.amazonaws.com/live
+```
+The Vercel frontend rewrites `/api/*` requests to the AWS backend.
+
+### Example
+
+```bash
+curl -X POST "http://localhost:9900/api/chat"   -H "Content-Type: application/json"   -d '{"Id":"session-123","Question":"Hello"}'
+
+curl -X POST "http://localhost:9900/api/aiops"   -H "Content-Type: application/json"   -d '{"session_id":"session-123"}'   --no-buffer
+```
+
+### Common Commands
+
+```bash
+make local-up          # Start full local Docker stack
+make local-down        # Stop full local Docker stack
+make local-logs        # View local Docker logs
+make local-status      # Check local Docker services
+```
+
+### AIOps Flow
+
+1. Planner creates a diagnosis plan.
+2. Executor calls local and MCP tools.
+3. Replanner decides whether to continue, adjust the plan, or respond.
+4. The final report is generated as Markdown and stored in the knowledge base.
+
+### Troubleshooting
+
+Check logs:
+
+```bash
+tail -f server.log
+tail -f mcp_cls.log
+tail -f mcp_monitor.log
+```
+
+Check ports:
+
+```bash
+lsof -i :9900
+lsof -i :8003
+lsof -i :8004
+```
+
+Restart Milvus:
+
+```bash
+docker compose -f vector-database.yml restart
+```
+
+### Cloud Architecture
+
+```text
+Vercel static frontend
+  -> /api/* rewrite
+      -> AWS ALB
+          -> ECS backend service
+              -> one Fargate task
+                  -> backend container          :9900
+                  -> CLS MCP container          :8003
+                  -> Monitor MCP container      :8004
+                  -> AWS ADOT collector sidecar
+              -> EC2 Milvus
+              -> AWS Managed Prometheus
+              -> CloudWatch Logs
+```
+
+The cloud stack is the live demo path. In this profile, `cls-mcp` runs in
+`CLS_MODE=cloudwatch` and reads real CloudWatch Logs through AWS IAM. The
+backend calls MCP through localhost inside the same ECS task:
+
+```text
+MCP_CLS_URL=http://127.0.0.1:8003/mcp
+MCP_MONITOR_URL=http://127.0.0.1:8004/mcp
+```
+</details>
+
+
+
+<details>
+<summary><h3>Quick Start Locally</h3>
+</summary>
 
 ### Requirements
 
@@ -220,87 +305,4 @@ are made relative to the current time at query time, so recent-window searches
 continue to return useful sample incidents.
 </details>
 
-<details>
-<summary><h2>Live Demo deployed on AWS</h2>
-</summary>
-- Frontend: https://static-rho-six.vercel.app
-- Backend health: http://oncall-agent-alb-859528003.ap-southeast-2.elb.amazonaws.com/live
 
-The Vercel frontend rewrites `/api/*` requests to the AWS backend.
-
-
-
-### Example
-
-```bash
-curl -X POST "http://localhost:9900/api/chat"   -H "Content-Type: application/json"   -d '{"Id":"session-123","Question":"Hello"}'
-
-curl -X POST "http://localhost:9900/api/aiops"   -H "Content-Type: application/json"   -d '{"session_id":"session-123"}'   --no-buffer
-```
-
-### Common Commands
-
-```bash
-make local-up          # Start full local Docker stack
-make local-down        # Stop full local Docker stack
-make local-logs        # View local Docker logs
-make local-status      # Check local Docker services
-```
-
-### AIOps Flow
-
-1. Planner creates a diagnosis plan.
-2. Executor calls local and MCP tools.
-3. Replanner decides whether to continue, adjust the plan, or respond.
-4. The final report is generated as Markdown and stored in the knowledge base.
-
-### Troubleshooting
-
-Check logs:
-
-```bash
-tail -f server.log
-tail -f mcp_cls.log
-tail -f mcp_monitor.log
-```
-
-Check ports:
-
-```bash
-lsof -i :9900
-lsof -i :8003
-lsof -i :8004
-```
-
-Restart Milvus:
-
-```bash
-docker compose -f vector-database.yml restart
-```
-
-### Cloud Architecture
-
-```text
-Vercel static frontend
-  -> /api/* rewrite
-      -> AWS ALB
-          -> ECS backend service
-              -> one Fargate task
-                  -> backend container          :9900
-                  -> CLS MCP container          :8003
-                  -> Monitor MCP container      :8004
-                  -> AWS ADOT collector sidecar
-              -> EC2 Milvus
-              -> AWS Managed Prometheus
-              -> CloudWatch Logs
-```
-
-The cloud stack is the live demo path. In this profile, `cls-mcp` runs in
-`CLS_MODE=cloudwatch` and reads real CloudWatch Logs through AWS IAM. The
-backend calls MCP through localhost inside the same ECS task:
-
-```text
-MCP_CLS_URL=http://127.0.0.1:8003/mcp
-MCP_MONITOR_URL=http://127.0.0.1:8004/mcp
-```
-</details>
