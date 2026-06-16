@@ -18,7 +18,7 @@ Enterprise AI chat and operations assistant with RAG knowledge retrieval and AIO
 - **Tool Protocol**: MCP (Model Context Protocol)
 
 <details>
-<summary><strong>Project Structure</strong></summary>
+<summary><h2>Project Structure</h2></summary>
 
 ```text
 agent/
@@ -93,14 +93,19 @@ Vercel metadata, and private keys are intentionally ignored by Git.
 | Health check | GET | `/health` | Service health |
 
 ## Agents Workflow
-### Knowledge Base Agent (RAG: Retrieval Augmented-Generation)
+<details>
+<summary><h3>Knowledge Base Agent (RAG: Retrieval-Augmented Generation)</h3></summary>
 
 ![Knowledge Base Agent Workflow](assets/knowledge_base_agent_workflow_v2.svg)
-The workflow is split into two lanes matching the original:
-1. Indexing lane (top): Upload file → File chunking → Index/embed → Store in Vector Database
-2. Retrieval lane (bottom): Ask question → Embed query with embedding → Search Vector Database → Augment LLM (sends retrieved docs + question to the large model) → Generate final answer
 
-### Conversation Agent (ReAct: Reasoning + Acting)
+The workflow is split into two lanes matching the original:
+1. Indexing lane (top): Upload file -> File chunking -> Index/embed -> Store in Vector Database
+2. Retrieval lane (bottom): Ask question -> Embed query -> Search Vector Database -> Augment the LLM with retrieved documents and the user question -> Generate the final answer
+
+</details>
+
+<details>
+<summary><h3>Conversation Agent (ReAct: Reasoning + Acting)</h3></summary>
 
 ![Conversation Agent Workflow](assets/conversation_agent_workflow.svg)
 1.1 User sends an input message → Prompt construction
@@ -110,6 +115,7 @@ The Tool call? diamond decides the branch:
     3.1 Yes → calls a tool from the tool set → tool response loops back (step 4) to the large model 
     3.2 No → replies directly to the user as the final answer
 The loop continues until no more tool calls are needed
+</details>
 
 
 
