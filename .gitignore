@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+!.env.local.example
+!.env.cloud.example
 
 # OS / editor
 .DS_Store
@@ -33,6 +35,7 @@ venv/
 env/
 ENV/
 .uv/
+node_modules/
 
 # Runtime files
 *.log
@@ -40,6 +43,11 @@ ENV/
 logs/
 uploads/
 *.tmp
+
+# Frontend / deployment tool output
+.vercel/
+.next/
+coverage/
 
 # Secrets and private keys
 *.pem

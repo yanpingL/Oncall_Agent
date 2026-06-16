@@ -1,0 +1,144 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "agent/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-oncall-agent-main
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+  ECS_BACKEND_SERVICE: ${{ vars.ECS_BACKEND_SERVICE }}
+  ECS_TASK_FAMILY: ${{ vars.ECS_TASK_FAMILY }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agent
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate required GitHub variables
+        run: |
+          missing=0
+          for var_name in AWS_REGION ECR_REPOSITORY ECS_CLUSTER ECS_BACKEND_SERVICE ECS_TASK_FAMILY AWS_ROLE_ARN; do
+            if [ -z "${!var_name}" ]; then
+              echo "Missing required GitHub variable: $var_name"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push backend image
+        id: build-image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          IMAGE_URI="$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          IMAGE_LATEST_URI="$REGISTRY/$ECR_REPOSITORY:latest"
+
+          docker build \
+            -t "$IMAGE_URI" \
+            -t "$IMAGE_LATEST_URI" \
+            .
+
+          docker push "$IMAGE_URI"
+          docker push "$IMAGE_LATEST_URI"
+
+          echo "image_uri=$IMAGE_URI" >> "$GITHUB_OUTPUT"
+
+      - name: Register new ECS task definition revision
+        id: task-def
+        env:
+          IMAGE_URI: ${{ steps.build-image.outputs.image_uri }}
+        run: |
+          aws ecs describe-task-definition \
+            --region "$AWS_REGION" \
+            --task-definition "$ECS_TASK_FAMILY" \
+            --query taskDefinition \
+            --output json > current-task-def.json
+
+          jq \
+            --arg image "$IMAGE_URI" \
+            '
+            del(
+              .taskDefinitionArn,
+              .revision,
+              .status,
+              .requiresAttributes,
+              .compatibilities,
+              .registeredAt,
+              .registeredBy
+            )
+            | .containerDefinitions |= map(
+                if (.name == "backend" or .name == "cls-mcp" or .name == "monitor-mcp") then
+                  .image = $image
+                  | if .name == "backend" then
+                      .environment |= map(
+                        if .name == "MCP_CLS_URL" then .value = "http://127.0.0.1:8003/mcp"
+                        elif .name == "MCP_MONITOR_URL" then .value = "http://127.0.0.1:8004/mcp"
+                        else .
+                        end
+                      )
+                    else .
+                    end
+                else .
+                end
+              )
+            ' current-task-def.json > new-task-def.json
+
+          TASK_DEFINITION_ARN="$(
+            aws ecs register-task-definition \
+              --region "$AWS_REGION" \
+              --cli-input-json file://new-task-def.json \
+              --query 'taskDefinition.taskDefinitionArn' \
+              --output text
+          )"
+
+          echo "task_definition_arn=$TASK_DEFINITION_ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy new task definition
+        env:
+          TASK_DEFINITION_ARN: ${{ steps.task-def.outputs.task_definition_arn }}
+        run: |
+          aws ecs update-service \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_BACKEND_SERVICE" \
+            --task-definition "$TASK_DEFINITION_ARN" \
+            --force-new-deployment
+
+          aws ecs wait services-stable \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_BACKEND_SERVICE"
