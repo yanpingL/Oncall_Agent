@@ -17,6 +17,10 @@ RUN apt-get update \
 COPY pyproject.toml README.md ./
 COPY app ./app
 COPY mcp_servers ./mcp_servers
+COPY static ./static
+COPY aiops-docs ./aiops-docs
+COPY prometheus-demo ./prometheus-demo
+COPY demo-data ./demo-data
 
 RUN pip install --upgrade pip \
     && pip install . \

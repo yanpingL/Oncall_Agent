@@ -1,0 +1,40 @@
+{
+  "events": [
+    {
+      "topic_id": "backend",
+      "offset_seconds": -300,
+      "logStreamName": "backend/demo",
+      "message": "INFO request_id=demo-001 POST /api/chat completed status=200 latency_ms=184"
+    },
+    {
+      "topic_id": "backend",
+      "offset_seconds": -240,
+      "logStreamName": "backend/demo",
+      "message": "WARN request_id=demo-002 aiops diagnosis detected elevated checkout latency service=payment-api latency_ms=2380"
+    },
+    {
+      "topic_id": "backend",
+      "offset_seconds": -180,
+      "logStreamName": "backend/demo",
+      "message": "ERROR request_id=demo-003 service=payment-api dependency=postgres timeout after 5000ms"
+    },
+    {
+      "topic_id": "monitor-mcp",
+      "offset_seconds": -150,
+      "logStreamName": "monitor-mcp/demo",
+      "message": "INFO Prometheus query executed query='up' status=success samples=4"
+    },
+    {
+      "topic_id": "cls-mcp",
+      "offset_seconds": -120,
+      "logStreamName": "cls-mcp/demo",
+      "message": "INFO demo CLS search served local fixture events source=demo-data"
+    },
+    {
+      "topic_id": "adot-collector",
+      "offset_seconds": -90,
+      "logStreamName": "adot-collector/demo",
+      "message": "WARN otel collector exported partial batch exporter=prometheus remote_write_dropped=2"
+    }
+  ]
+}

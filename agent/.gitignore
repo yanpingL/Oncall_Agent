@@ -25,6 +25,7 @@ venv/
 env/
 ENV/
 .venv
+node_modules/
 
 # uv
 .uv/
@@ -42,14 +43,26 @@ poetry.lock
 # CodeBuddy
 .codebuddy/
 
+# Local launch helpers
+start-windows.bat
+stop-windows.bat
+scripts/
+docs/
+
 # Environment
 .env
 .env.local
+.env.cloud
 
 # Logs
 logs/
 *.log
 *.pid
+
+# Frontend / deployment tool output
+.vercel/
+.next/
+coverage/
 
 # Database
 *.db

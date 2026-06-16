@@ -94,6 +94,21 @@ async def metrics():
     return metrics_response()
 
 
+@app.get("/{asset_name:path}", include_in_schema=False)
+async def static_asset_fallback(asset_name: str):
+    """Serve root-relative static assets for the static frontend bundle."""
+    allowed_assets = {"app.js", "styles.css"}
+    if asset_name in allowed_assets:
+        asset_path = os.path.join(static_dir, asset_name)
+        if os.path.isdir(static_dir) and os.path.exists(asset_path):
+            return FileResponse(asset_path)
+    return {
+        "message": f"Welcome to {config.app_name} API",
+        "version": config.app_version,
+        "docs": "/docs"
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     

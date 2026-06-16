@@ -13,6 +13,7 @@ import os
 import re
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 import boto3
@@ -29,6 +30,8 @@ logger = logging.getLogger("CLS_MCP_Server")
 mcp = FastMCP("CLS")
 
 DEFAULT_REGION = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION") or "ap-southeast-2"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEMO_MODE_NAMES = {"demo", "local", "mock"}
 DEFAULT_LOG_TOPICS = [
     {
         "topic_id": "backend",
@@ -61,6 +64,45 @@ DEFAULT_LOG_TOPICS = [
         "region_code": DEFAULT_REGION,
         "log_group_name": "/ecs/oncall-agent-adot-collector",
         "description": "AWS Distro for OpenTelemetry collector logs",
+    },
+]
+
+BUILTIN_DEMO_LOG_EVENTS = [
+    {
+        "topic_id": "backend",
+        "offset_seconds": -300,
+        "logStreamName": "backend/demo",
+        "message": "INFO request_id=demo-001 POST /api/chat completed status=200 latency_ms=184",
+    },
+    {
+        "topic_id": "backend",
+        "offset_seconds": -240,
+        "logStreamName": "backend/demo",
+        "message": "WARN request_id=demo-002 aiops diagnosis detected elevated checkout latency service=payment-api latency_ms=2380",
+    },
+    {
+        "topic_id": "backend",
+        "offset_seconds": -180,
+        "logStreamName": "backend/demo",
+        "message": "ERROR request_id=demo-003 service=payment-api dependency=postgres timeout after 5000ms",
+    },
+    {
+        "topic_id": "monitor-mcp",
+        "offset_seconds": -150,
+        "logStreamName": "monitor-mcp/demo",
+        "message": "INFO Prometheus query executed query='up' status=success samples=4",
+    },
+    {
+        "topic_id": "cls-mcp",
+        "offset_seconds": -120,
+        "logStreamName": "cls-mcp/demo",
+        "message": "INFO demo CLS search served local fixture events source=demo-data",
+    },
+    {
+        "topic_id": "adot-collector",
+        "offset_seconds": -90,
+        "logStreamName": "adot-collector/demo",
+        "message": "WARN otel collector exported partial batch exporter=prometheus remote_write_dropped=2",
     },
 ]
 
@@ -147,6 +189,18 @@ def _load_topics() -> list[dict[str, Any]]:
 
 def _logs_client(region_name: str):
     return boto3.client("logs", region_name=region_name)
+
+
+def _cls_mode() -> str:
+    return os.getenv("CLS_MODE", "cloudwatch").strip().lower()
+
+
+def _demo_logs_path() -> Path:
+    raw_path = os.getenv("CLS_DEMO_LOGS_PATH", "demo-data/cls_logs.json").strip()
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = PROJECT_ROOT / path
+    return path
 
 
 def _topic_public_view(topic: dict[str, Any]) -> dict[str, Any]:
@@ -236,6 +290,77 @@ def _to_log_entry(event: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _load_demo_log_events() -> list[dict[str, Any]]:
+    path = _demo_logs_path()
+    raw_events: list[dict[str, Any]]
+
+    if path.exists():
+        try:
+            parsed = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(parsed, dict):
+                events = parsed.get("events", [])
+            else:
+                events = parsed
+            raw_events = [event for event in events if isinstance(event, dict)]
+        except (OSError, json.JSONDecodeError) as e:
+            logger.warning("Failed to read CLS demo logs from %s; using built-in demo logs: %s", path, e)
+            raw_events = BUILTIN_DEMO_LOG_EVENTS
+    else:
+        logger.warning("CLS demo logs file not found at %s; using built-in demo logs", path)
+        raw_events = BUILTIN_DEMO_LOG_EVENTS
+
+    now_ms = int(time.time() * 1000)
+    normalized_events: list[dict[str, Any]] = []
+    for idx, event in enumerate(raw_events):
+        normalized = dict(event)
+        if "timestamp" not in normalized:
+            offset_seconds = int(normalized.get("offset_seconds", -idx - 1))
+            normalized["timestamp"] = now_ms + offset_seconds * 1000
+        normalized.setdefault("ingestionTime", normalized["timestamp"])
+        normalized.setdefault("eventId", f"demo-{idx + 1}")
+        normalized.setdefault("logStreamName", f"{normalized.get('topic_id', 'demo')}/demo")
+        normalized_events.append(normalized)
+
+    normalized_events.sort(key=lambda item: int(item.get("timestamp", 0)), reverse=True)
+    return normalized_events
+
+
+def _search_demo_log(
+    topic: dict[str, Any],
+    start_time: int,
+    end_time: int,
+    query: Optional[str],
+    safe_limit: int,
+    started: float,
+) -> dict[str, Any]:
+    topic_ids = {topic["topic_id"], topic["log_group_name"]}
+    matched_events = [
+        event
+        for event in _load_demo_log_events()
+        if str(event.get("topic_id") or event.get("log_group_name")) in topic_ids
+        and int(start_time) <= int(event.get("timestamp", 0)) <= int(end_time)
+        and _event_matches_query(event, query)
+    ][:safe_limit]
+    logs = [_to_log_entry(event) for event in matched_events]
+    took_ms = int((time.monotonic() - started) * 1000)
+
+    return {
+        "topic_id": topic["topic_id"],
+        "log_group_name": topic["log_group_name"],
+        "region_code": topic["region_code"],
+        "source": "demo",
+        "start_time": start_time,
+        "end_time": end_time,
+        "query": query,
+        "limit": safe_limit,
+        "total": len(logs),
+        "logs": logs,
+        "next_token": None,
+        "took_ms": took_ms,
+        "message": f"Successfully queried {len(logs)} local demo log events",
+    }
+
+
 @mcp.tool()
 @log_tool_call
 def get_current_timestamp() -> int:
@@ -280,7 +405,7 @@ def get_region_code_by_name(region_name: str) -> Dict[str, Any]:
 @mcp.tool()
 @log_tool_call
 def get_topic_info_by_name(topic_name: str, region_code: Optional[str] = None) -> Dict[str, Any]:
-    """Find configured CloudWatch log topic information by topic name."""
+    """Find configured log topic information by topic name."""
     topic_name_lower = topic_name.lower()
     for topic in _load_topics():
         if region_code and topic["region_code"] != region_code:
@@ -303,7 +428,7 @@ def search_topic_by_service_name(
     region_code: Optional[str] = None,
     fuzzy: bool = True,
 ) -> Dict[str, Any]:
-    """Search configured CloudWatch log groups by service name.
+    """Search configured log groups by service name.
 
     Use the returned topic_id with search_log.
     """
@@ -336,9 +461,9 @@ def search_topic_by_service_name(
             "fuzzy": fuzzy,
         },
         "message": (
-            f"Found {len(matched_topics)} matching CloudWatch log topics"
+            f"Found {len(matched_topics)} matching log topics"
             if matched_topics
-            else f"No CloudWatch log topic found for service '{service_name}'"
+            else f"No log topic found for service '{service_name}'"
         ),
     }
 
@@ -352,7 +477,10 @@ def search_log(
     query: Optional[str] = None,
     limit: int = 100,
 ) -> Dict[str, Any]:
-    """Search real CloudWatch Logs events for a configured topic.
+    """Search log events for a configured topic.
+
+    By default this queries AWS CloudWatch Logs. Set CLS_MODE=demo, local, or mock
+    to serve deterministic local demo logs for Docker-based development.
 
     Args:
         topic_id: topic ID returned by search_topic_by_service_name, or a CloudWatch log group name.
@@ -392,6 +520,10 @@ def search_log(
     safe_limit = max(1, min(int(limit), 500))
     fetch_limit = min(max(safe_limit * 5, safe_limit), 1000)
     started = time.monotonic()
+
+    if _cls_mode() in DEMO_MODE_NAMES:
+        return _search_demo_log(topic, start_time, end_time, query, safe_limit, started)
+
     logs_client = _logs_client(topic["region_code"])
 
     try:
