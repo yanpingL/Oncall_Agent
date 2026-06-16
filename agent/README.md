@@ -18,8 +18,8 @@ Enterprise AI chat and operations assistant with RAG knowledge retrieval and AIO
 - **Tool Protocol**: MCP (Model Context Protocol)
 
 <details>
-<summary><h2>Project Structure</h2>
-</summary>
+<summary><strong>Project Structure</strong></summary>
+
 ```text
 agent/
 ├── app/                         # FastAPI backend source code
@@ -30,33 +30,33 @@ agent/
 │   │   ├── aiops.py             # AIOps diagnosis endpoint
 │   │   ├── file.py              # File upload and indexing endpoints
 │   │   └── health.py            # Health and liveness endpoints
-|   |
+│   │
 │   ├── agent/                   # Agent orchestration code
 │   │   ├── aiops/               # Plan-Execute-Replan AIOps agent workflow
 │   │   └── mcp_client.py        # MCP client integration for agent tools
-|   |
+│   │
 │   ├── core/                    # Shared infrastructure clients and helpers
 │   │   ├── llm_factory.py       # LLM provider selection
 │   │   ├── milvus_client.py     # Milvus connection helper
 │   │   ├── prometheus_client.py # Prometheus query client
 │   │   ├── prometheus_alerts.py # Alert query helpers
 │   │   └── metrics.py           # Application metrics
-|   |
+│   │
 │   ├── services/                # Business service layer
 │   │   ├── aiops_service.py     # Runs the AIOps graph and stores final reports
 │   │   ├── rag_agent_service.py # RAG chat service
 │   │   ├── vector_index_service.py # Saves, chunks, embeds, and indexes documents/reports
 │   │   ├── vector_search_service.py # Searches the vector knowledge base                       
 │   │   └── vector_store_manager.py  # Milvus vector store operations
-│   │                             
+│   │
 │   ├── tools/                   # Agent-callable tools
 │   ├── models/                  # Request/response Pydantic models
 │   └── utils/                   # Logging and utility helpers
-|   
+│
 ├── mcp_servers/                 # Standalone MCP server implementations
 │   ├── cls_server.py            # Log-search MCP server; demo mode locally, CloudWatch in AWS
 │   └── monitor_server.py        # Monitoring MCP server backed by Prometheus
-|   
+│
 ├── static/                      # Plain HTML/CSS/JS frontend served by FastAPI and Vercel
 ├── assets/                      # README architecture and workflow diagrams
 ├── aiops-docs/                  # Seed knowledge-base documents for AIOps examples
@@ -82,7 +82,7 @@ Vercel metadata, and private keys are intentionally ignored by Git.
 
 ![Functional Architecture](assets/system_architecture_diagram_english_v3.svg)
 
-### 📡API
+## 📡API
 
 | Feature | Method | Path | Description |
 |---------|--------|------|----------------------|
@@ -96,7 +96,6 @@ Vercel metadata, and private keys are intentionally ignored by Git.
 ### Knowledge Base Agent (RAG: Retrieval Augmented-Generation)
 
 ![Knowledge Base Agent Workflow](assets/knowledge_base_agent_workflow_v2.svg)
-
 The workflow is split into two lanes matching the original:
 1. Indexing lane (top): Upload file → File chunking → Index/embed → Store in Vector Database
 2. Retrieval lane (bottom): Ask question → Embed query with embedding → Search Vector Database → Augment LLM (sends retrieved docs + question to the large model) → Generate final answer
@@ -104,7 +103,6 @@ The workflow is split into two lanes matching the original:
 ### Conversation Agent (ReAct: Reasoning + Acting)
 
 ![Conversation Agent Workflow](assets/conversation_agent_workflow.svg)
-
 1.1 User sends an input message → Prompt construction
 1.2 User message is also recalled from the Vector Database → fed back into Prompt construction
 2. Prompt enters the ReAct pattern → Large model
@@ -300,7 +298,3 @@ MCP_CLS_URL=http://127.0.0.1:8003/mcp
 MCP_MONITOR_URL=http://127.0.0.1:8004/mcp
 ```
 </details>
-
-## License
-
-MIT License
