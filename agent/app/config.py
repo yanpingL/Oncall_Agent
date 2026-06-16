@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     milvus_host: str = "127.0.0.1"
     milvus_port: int = 19530
     milvus_timeout: int = 10000  # milliseconds
+    milvus_connect_on_startup: bool = True
 
     # RAG config
     rag_top_k: int = 3
@@ -62,6 +63,9 @@ class Settings(BaseSettings):
     # Prometheus
     prometheus_base_url: str = "http://127.0.0.1:9090"
     prometheus_request_timeout: float = 10.0
+    prometheus_auth_type: str = "auto"  # auto | none | sigv4
+    prometheus_sigv4_region: str = "ap-southeast-2"
+    prometheus_sigv4_service: str = "aps"
 
     @property
     def mcp_servers(self) -> Dict[str, Dict[str, Any]]:

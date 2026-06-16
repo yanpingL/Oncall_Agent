@@ -24,7 +24,7 @@ NC = \033[0m
         security pre-commit-install pre-commit check-all coverage docs shell \
         ipython watch add add-dev remove list-docs test-upload sync logs \
         start-cls stop-cls start-monitor stop-monitor start-prometheus stop-prometheus \
-        status-prometheus start-api stop-api status-mcp
+        status-prometheus start-api stop-api status-mcp local-up local-down local-logs local-status
 
 # ============================================================
 # Default target: show help information
@@ -40,6 +40,9 @@ help:
 	@echo "$(CYAN)[Docker Management]$(NC)"
 	@echo "  $(YELLOW)make up$(NC)           - 🐳 Start Milvus containers"
 	@echo "  $(YELLOW)make down$(NC)         - 🛑 Stop Milvus containers"
+	@echo "  $(YELLOW)make local-up$(NC)     - Start full local Docker stack"
+	@echo "  $(YELLOW)make local-down$(NC)   - Stop full local Docker stack"
+	@echo "  $(YELLOW)make local-logs$(NC)   - Tail local Docker stack logs"
 	@echo "  $(YELLOW)make status$(NC)       - 📊 View container status"
 	@echo "  $(YELLOW)make start-prometheus$(NC) - 📈 Start Prometheus showcase container"
 	@echo "  $(YELLOW)make stop-prometheus$(NC)  - 🛑 Stop Prometheus showcase container"
@@ -133,6 +136,27 @@ init:
 # ============================================================
 # Docker Management
 # ============================================================
+
+local-up:
+	@if [ ! -f .env.local ]; then \
+		echo "$(YELLOW)Creating .env.local from .env.local.example. Add API keys before using LLM features.$(NC)"; \
+		cp .env.local.example .env.local; \
+	fi
+	docker compose --env-file .env.local -f vector-database.yml -f docker-compose.local.yml up --build -d
+	@echo "$(GREEN)Local stack is starting.$(NC)"
+	@echo "  Web UI/API: http://localhost:9900"
+	@echo "  API docs:   http://localhost:9900/docs"
+	@echo "  Prometheus: http://localhost:9090"
+	@echo "  Attu:       http://localhost:8000"
+
+local-down:
+	docker compose --env-file .env.local -f vector-database.yml -f docker-compose.local.yml down
+
+local-logs:
+	docker compose --env-file .env.local -f vector-database.yml -f docker-compose.local.yml logs -f
+
+local-status:
+	docker compose --env-file .env.local -f vector-database.yml -f docker-compose.local.yml ps
 
 # Start Docker containers with docker compose
 up:

@@ -14,6 +14,7 @@ from app.config import config
 from loguru import logger
 from app.api import chat, health, file, aiops
 from app.core.milvus_client import milvus_manager
+from app.core.metrics import metrics_middleware, metrics_response
 
 
 @asynccontextmanager
@@ -26,10 +27,14 @@ async def lifespan(app: FastAPI):
     logger.info(f"🌐 Listening address: http://{config.host}:{config.port}")
     logger.info(f"📚 API docs: http://{config.host}:{config.port}/docs")
     
-    # Connect Milvus
-    logger.info("🔌 Connecting to Milvus...")
-    milvus_manager.connect()
-    logger.info("✅ Milvus connected successfully")
+    # Connect Milvus when configured. In cloud deployments this can be disabled
+    # during the first backend rollout and re-enabled after the vector DB is ready.
+    if config.milvus_connect_on_startup:
+        logger.info("🔌 Connecting to Milvus...")
+        milvus_manager.connect()
+        logger.info("✅ Milvus connected successfully")
+    else:
+        logger.warning("Milvus startup connection is disabled; vector features require Milvus later")
     
     logger.info("=" * 60)
     
@@ -57,6 +62,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.middleware("http")(metrics_middleware)
 
 # Register routes
 app.include_router(health.router, tags=["Health check"])
@@ -64,16 +70,38 @@ app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(file.router, prefix="/api", tags=["File management"])
 app.include_router(aiops.router, prefix="/api", tags=["AIOps operations"])
 
-# Mount static files
+# Mount static files only when the frontend bundle is present.
 static_dir = "static"
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+if os.path.isdir(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 @app.get("/")
 async def root():
     """Return homepage"""
     index_path = os.path.join(static_dir, "index.html")
-    if os.path.exists(index_path):
+    if os.path.isdir(static_dir) and os.path.exists(index_path):
         return FileResponse(index_path)
+    return {
+        "message": f"Welcome to {config.app_name} API",
+        "version": config.app_version,
+        "docs": "/docs"
+    }
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics():
+    """Prometheus metrics endpoint."""
+    return metrics_response()
+
+
+@app.get("/{asset_name:path}", include_in_schema=False)
+async def static_asset_fallback(asset_name: str):
+    """Serve root-relative static assets for the static frontend bundle."""
+    allowed_assets = {"app.js", "styles.css"}
+    if asset_name in allowed_assets:
+        asset_path = os.path.join(static_dir, asset_name)
+        if os.path.isdir(static_dir) and os.path.exists(asset_path):
+            return FileResponse(asset_path)
     return {
         "message": f"Welcome to {config.app_name} API",
         "version": config.app_version,
