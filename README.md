@@ -1,6 +1,7 @@
 # Oncall-Agent
 
 Enterprise AI chat and operations assistant with RAG knowledge retrieval and AIOps diagnosis.
+
 Live Demo: [Live frontend](https://static-rho-six.vercel.app)
 
 ## ✨ Features
@@ -118,6 +119,7 @@ The workflow is split into two lanes matching the original:
 ![Conversation Agent Workflow](agent/assets/conversation_agent_workflow.svg)
 The core goal of the Conversational Agent is to combine external knowledge (RAG retrieval) with tool-calling capabilities (ReAct pattern) to solve complex problem.
 
+```text
 The overall flow can be summarized as:
 1.1 User sends an input message → Prompt construction
 1.2 User message is also recalled from the Vector Database → fed back into Prompt construction
@@ -126,6 +128,7 @@ The Tool call? diamond decides the branch:
     3.1 Yes → calls a tool from the tool set → tool response loops back (step 4) to the large model 
     3.2 No → replies directly to the user as the final answer
 The loop continues until no more tool calls are needed
+```
 </details>
 
 <details>
@@ -134,6 +137,7 @@ The loop continues until no more tool calls are needed
 ![Operation Agent Workflow](agent/assets/ops_agent_plan_execute_replan.svg)
 The core goal of the Operations Agent is to transform the alert-handling experience of operations engineers into an automated workflow. Through a closed loop of Plan Generation → Tool Execution → Dynamic Adjustment, it replaces manual effort in repetitive alert investigation tasks.
 
+```text
 The overall architecture can be summarized as:
 1. Retrieve alert-related context from a vector database
 2. Construct a system prompt with context (recalled content and tool information)
@@ -143,6 +147,7 @@ The overall architecture can be summarized as:
     c. Replanner evaluates the results and decides whether to continue execution, revise the plan, or output a conclusion
 4. Before emitting the final answer, convert the final report into markdown file and call the Knowledge Base Agent to split the file and store the chunk of files into vector database for future reference.
 5. Produce the final answer
+```
 </details>
 
 
