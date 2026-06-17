@@ -3,7 +3,6 @@ name = "super-biz-agent-py"
 version = "1.2.1"
 description = "LangChain-based intelligent business agent system with RAG knowledge base and AIOps operations"
 authors = [{name = "chief"}]
-readme = "README.md"
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "fastapi>=0.109.0",

@@ -14,7 +14,7 @@ RUN apt-get update \
     && groupadd --system app \
     && useradd --system --gid app --home-dir /app app
 
-COPY pyproject.toml README.md ./
+COPY pyproject.toml ./
 COPY app ./app
 COPY mcp_servers ./mcp_servers
 COPY static ./static
