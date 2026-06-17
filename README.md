@@ -1,6 +1,7 @@
-# SuperBizAgent
+# Oncall-Agent
 
 Enterprise AI chat and operations assistant with RAG knowledge retrieval and AIOps diagnosis.
+Live Demo: [Live frontend](https://static-rho-six.vercel.app)
 
 ## ✨ Features
 
@@ -102,10 +103,13 @@ Vercel metadata, and private keys are intentionally ignored by Git.
 
 ![Knowledge Base Agent Workflow](agent/assets/knowledge_base_agent_workflow_v2.svg)
 
+The core goal of the Knowledge Base Agent is to split the reference files and store them into Vector Database so that future conversation and Diagnosis can reference the knowledge base stored in vector db to generate reliable answer.
+
+```text
 The workflow is split into two lanes matching the original:
 1. Indexing lane (top): Upload file -> File chunking -> Index/embed -> Store in Vector Database
 2. Retrieval lane (bottom): Ask question -> Embed query -> Search Vector Database -> Augment the LLM with retrieved documents and the user question -> Generate the final answer
-
+```
 </details>
 
 <details>
@@ -137,7 +141,8 @@ The overall architecture can be summarized as:
     a. Planner generates a structured investigation plan
     b. Executor calls monitoring/log tools to execute each step
     c. Replanner evaluates the results and decides whether to continue execution, revise the plan, or output a conclusion
-4. Produce the final answer
+4. Before emitting the final answer, convert the final report into markdown file and call the Knowledge Base Agent to split the file and store the chunk of files into vector database for future reference.
+5. Produce the final answer
 </details>
 
 
@@ -210,11 +215,6 @@ Vercel static frontend
 The cloud stack is the live demo path. In this profile, `cls-mcp` runs in
 `CLS_MODE=cloudwatch` and reads real CloudWatch Logs through AWS IAM. The
 backend calls MCP through localhost inside the same ECS task:
-
-
-- MCP_CLS_URL: [MCP_CLS_URL](http://127.0.0.1:8003/mcp)
-- MCP_MONITOR_URL: [MCP_MONITOR_URL](http://127.0.0.1:8004/mcp)
-
 </details>
 
 
@@ -271,11 +271,11 @@ Then open:
 ### URLs
 
 
-Web UI/API: [Web UI/PAI](http://localhost:9900)
-API docs:   [API docs](http://localhost:9900/docs)
-Prometheus: [Prometheus](http://localhost:9090)
-Attu:       [Attu](http://localhost:8000)
-MinIO:      [MinIO](http://localhost:9001)
+Web UI/API: [Web UI/API Link](http://localhost:9900)
+API docs:   [API docs Link](http://localhost:9900/docs)
+Prometheus: [Prometheus Link](http://localhost:9090)
+Attu:       [Attu Link](http://localhost:8000)
+MinIO:      [MinIO Link](http://localhost:9001)
 
 
 Stop the stack with:
