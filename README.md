@@ -111,7 +111,7 @@ The workflow is split into two lanes matching the original:
 <details>
 <summary><h3>Conversation Agent (ReAct Pattern: Reasoning + Acting)</h3></summary>
 
-![Conversation Agent Workflow](assets/conversation_agent_workflow.svg)
+![Conversation Agent Workflow](agent/assets/conversation_agent_workflow.svg)
 The core goal of the Conversational Agent is to combine external knowledge (RAG retrieval) with tool-calling capabilities (ReAct pattern) to solve complex problem.
 
 The overall flow can be summarized as:
