@@ -15,7 +15,7 @@ UPLOAD_DIR = Path("./uploads")
 # Supported file types
 ALLOWED_EXTENSIONS = ["txt", "md"]
 # Maximum supported size for one file
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 
 
 @router.post("/upload")
@@ -61,7 +61,7 @@ async def upload_file(file: UploadFile = File(...)):
 
         # Validate file size
         if len(content) > MAX_FILE_SIZE:
-            raise HTTPException(status_code=400, detail=f"File size exceeds limit (max {MAX_FILE_SIZE} bytes)")
+            raise HTTPException(status_code=400, detail="File size exceeds limit (max {MAX_FILE_SIZE} bytes)")
 
         file_path.write_bytes(content)
 
