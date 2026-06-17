@@ -13,7 +13,7 @@ Enterprise AI chat and operations assistant with RAG knowledge retrieval and AIO
 ## 🛠️ Tech Stack
 
 - **Framework**: FastAPI, LangChain, LangGraph
-- **LLM**: (OpenAI)GPT-5.4-nano or other OpenAI-compatible chat models
+- **LLM**: GPT-5.4-nano or other OpenAI-compatible chat models
 - **Vector Database**: Milvus vector database
 - **Tool Protocol**: MCP (Model Context Protocol)
 
@@ -44,8 +44,11 @@ agent/
 │   │   └── metrics.py           # Application metrics
 │   │
 │   ├── services/                # Business service layer
+│   │   ├── __init__.py          # Service package marker
 │   │   ├── aiops_service.py     # Runs the AIOps graph and stores final reports
+│   │   ├── document_splitter_service.py # Splits uploaded documents into chunks
 │   │   ├── rag_agent_service.py # RAG chat service
+│   │   ├── vector_embedding_service.py # Builds embeddings for chunks and queries
 │   │   ├── vector_index_service.py # Saves, chunks, embeds, and indexes documents/reports
 │   │   ├── vector_search_service.py # Searches the vector knowledge base                       
 │   │   └── vector_store_manager.py  # Milvus vector store operations
@@ -95,7 +98,7 @@ Vercel metadata, and private keys are intentionally ignored by Git.
 
 ## Agents Workflow
 <details>
-<summary><h3>Knowledge Base Agent (RAG: Retrieval-Augmented Generation)</h3></summary>
+<summary><h3>Knowledge Base Agent (RAG Pattern: Retrieval-Augmented Generation)</h3></summary>
 
 ![Knowledge Base Agent Workflow](assets/knowledge_base_agent_workflow_v2.svg)
 
@@ -106,9 +109,12 @@ The workflow is split into two lanes matching the original:
 </details>
 
 <details>
-<summary><h3>Conversation Agent (ReAct: Reasoning + Acting)</h3></summary>
+<summary><h3>Conversation Agent (ReAct Pattern: Reasoning + Acting)</h3></summary>
 
 ![Conversation Agent Workflow](assets/conversation_agent_workflow.svg)
+The core goal of the Conversational Agent is to combine external knowledge (RAG retrieval) with tool-calling capabilities (ReAct pattern) to solve complex problem.
+
+The overall flow can be summarized as:
 1.1 User sends an input message → Prompt construction
 1.2 User message is also recalled from the Vector Database → fed back into Prompt construction
 2. Prompt enters the ReAct pattern → Large model
@@ -118,25 +124,31 @@ The Tool call? diamond decides the branch:
 The loop continues until no more tool calls are needed
 </details>
 
+<details>
+<summary><h3>Operations Agent (Plan-Execute-Replan Pattern)</h3></summary>
+
+![Operation Agent Workflow](assets/ops_agent_plan_execute_replan.svg)
+The core goal of the Operations Agent is to transform the alert-handling experience of operations engineers into an automated workflow. Through a closed loop of Plan Generation → Tool Execution → Dynamic Adjustment, it replaces manual effort in repetitive alert investigation tasks.
+
+The overall architecture can be summarized as:
+1. Retrieve alert-related context from a vector database
+2. Construct a system prompt with context (recalled content and tool information)
+3. Run multi-turn interactions using the Plan-Execute-Replan pattern
+    a. Planner generates a structured investigation plan
+    b. Executor calls monitoring/log tools to execute each step
+    c. Replanner evaluates the results and decides whether to continue execution, revise the plan, or output a conclusion
+4. Produce the final answer
+</details>
+
 
 ## Project Launch 
 <details>
 <summary><h3>Live Demo deployed on AWS</h3>
 </summary>
 
-```text
-- Frontend: https://static-rho-six.vercel.app
-- Backend health: http://oncall-agent-alb-859528003.ap-southeast-2.elb.amazonaws.com/live
-```
+- Frontend: [Live frontend](https://static-rho-six.vercel.app)
+- Backend health: [Backend health check](http://oncall-agent-alb-859528003.ap-southeast-2.elb.amazonaws.com/live)
 The Vercel frontend rewrites `/api/*` requests to the AWS backend.
-
-### Example
-
-```bash
-curl -X POST "http://localhost:9900/api/chat"   -H "Content-Type: application/json"   -d '{"Id":"session-123","Question":"Hello"}'
-
-curl -X POST "http://localhost:9900/api/aiops"   -H "Content-Type: application/json"   -d '{"session_id":"session-123"}'   --no-buffer
-```
 
 ### Common Commands
 
@@ -199,10 +211,10 @@ The cloud stack is the live demo path. In this profile, `cls-mcp` runs in
 `CLS_MODE=cloudwatch` and reads real CloudWatch Logs through AWS IAM. The
 backend calls MCP through localhost inside the same ECS task:
 
-```text
-MCP_CLS_URL=http://127.0.0.1:8003/mcp
-MCP_MONITOR_URL=http://127.0.0.1:8004/mcp
-```
+
+- MCP_CLS_URL: [MCP_CLS_URL](http://127.0.0.1:8003/mcp)
+- MCP_MONITOR_URL: [MCP_MONITOR_URL](http://127.0.0.1:8004/mcp)
+
 </details>
 
 
@@ -254,20 +266,17 @@ minio/etcd   Milvus dependencies
 ```
 
 Then open:
-
-```bash
-http://localhost:9900
-```
+-Frontend: [Live Frontend](http://localhost:9900)
 
 ### URLs
 
-```text
-Web UI/API: http://localhost:9900
-API docs:   http://localhost:9900/docs
-Prometheus: http://localhost:9090
-Attu:       http://localhost:8000
-MinIO:      http://localhost:9001
-```
+
+Web UI/API: [Web UI/PAI](http://localhost:9900)
+API docs:   [API docs](http://localhost:9900/docs)
+Prometheus: [Prometheus](http://localhost:9090)
+Attu:       [Attu](http://localhost:8000)
+MinIO:      [MinIO](http://localhost:9001)
+
 
 Stop the stack with:
 
@@ -305,5 +314,3 @@ from `demo-data/cls_logs.json` instead of CloudWatch Logs. The demo timestamps
 are made relative to the current time at query time, so recent-window searches
 continue to return useful sample incidents.
 </details>
-
-
