@@ -84,7 +84,7 @@ Vercel metadata, and private keys are intentionally ignored by Git.
 
 ## Functional Architecture
 
-![Functional Architecture](assets/system_architecture_diagram_english_v3.svg)
+![Functional Architecture](agent/assets/system_architecture_diagram_english_v3.svg)
 
 ## 📡API
 
@@ -100,7 +100,7 @@ Vercel metadata, and private keys are intentionally ignored by Git.
 <details>
 <summary><h3>Knowledge Base Agent (RAG Pattern: Retrieval-Augmented Generation)</h3></summary>
 
-![Knowledge Base Agent Workflow](assets/knowledge_base_agent_workflow_v2.svg)
+![Knowledge Base Agent Workflow](agent/assets/knowledge_base_agent_workflow_v2.svg)
 
 The workflow is split into two lanes matching the original:
 1. Indexing lane (top): Upload file -> File chunking -> Index/embed -> Store in Vector Database
@@ -127,7 +127,7 @@ The loop continues until no more tool calls are needed
 <details>
 <summary><h3>Operations Agent (Plan-Execute-Replan Pattern)</h3></summary>
 
-![Operation Agent Workflow](assets/ops_agent_plan_execute_replan.svg)
+![Operation Agent Workflow](agent/assets/ops_agent_plan_execute_replan.svg)
 The core goal of the Operations Agent is to transform the alert-handling experience of operations engineers into an automated workflow. Through a closed loop of Plan Generation → Tool Execution → Dynamic Adjustment, it replaces manual effort in repetitive alert investigation tasks.
 
 The overall architecture can be summarized as:
