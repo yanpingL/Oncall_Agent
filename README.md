@@ -2,7 +2,7 @@
 
 Enterprise AI chat and operations assistant with RAG knowledge retrieval and AIOps diagnosis.
 
-Live Demo: [Live frontend](https://static-rho-six.vercel.app)
+Live Demo: [Live Demo](https://static-rho-six.vercel.app)
 
 ## ✨ Features
 
@@ -277,9 +277,13 @@ Then open:
 
 
 Web UI/API: [Web UI/API Link](http://localhost:9900)
+
 API docs:   [API docs Link](http://localhost:9900/docs)
+
 Prometheus: [Prometheus Link](http://localhost:9090)
+
 Attu:       [Attu Link](http://localhost:8000)
+
 MinIO:      [MinIO Link](http://localhost:9001)
 
 
