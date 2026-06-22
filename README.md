@@ -1,6 +1,6 @@
 # Oncall-Agent
 
-Enterprise AI chat and operations assistant with RAG knowledge retrieval and AIOps diagnosis.
+Multi-Agent on-call AI system with three core agents: Knowledge Index Agent, Chat ReAct Agent, and AIOps Plan-Execute-Replan Agent. The system supports broad LLM-based conversations through the Chat ReAct Agent, and enables AIOps diagnosis by combining knowledge retrieval, alert analysis, log investigation, and tool execution to provide remediation guidance and improve on-call efficiency.
 
 Live Demo: [Live Demo](https://static-rho-six.vercel.app)
 
