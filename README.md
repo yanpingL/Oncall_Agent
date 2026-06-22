@@ -84,7 +84,7 @@ Vercel metadata, and private keys are intentionally ignored by Git.
 
 </details>
 
-## Functional Architecture
+## System Architecture
 
 ![Functional Architecture](agent/assets/system_architecture_diagram_english_v3.svg)
 
