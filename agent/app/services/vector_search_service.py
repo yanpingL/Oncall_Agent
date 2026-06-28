@@ -1,3 +1,4 @@
+
 """Vector search service module"""
 
 from typing import Any, Dict, List

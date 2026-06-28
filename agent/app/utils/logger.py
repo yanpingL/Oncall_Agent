@@ -1,3 +1,4 @@
+
 """Logger configuration module
 
 Use Loguru to configure application logs

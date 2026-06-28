@@ -1,3 +1,4 @@
+
 """Knowledge retrieval tool for retrieving relevant information from the vector database"""
 
 from typing import List, Tuple

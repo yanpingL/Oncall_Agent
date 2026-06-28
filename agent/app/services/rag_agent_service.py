@@ -1,3 +1,4 @@
+
 """RAG Agent service based on LangGraph."""
 
 from typing import Annotated, Any, AsyncGenerator, Dict, Sequence

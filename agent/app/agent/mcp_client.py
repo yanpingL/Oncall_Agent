@@ -1,3 +1,4 @@
+
 """
 MCP client management
 Provides a global singleton MCP client to avoid repeated initialization

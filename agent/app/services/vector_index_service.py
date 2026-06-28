@@ -1,3 +1,4 @@
+
 """Vector indexing service module"""
 
 from datetime import datetime

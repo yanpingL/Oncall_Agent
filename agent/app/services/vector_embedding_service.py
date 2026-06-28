@@ -1,3 +1,4 @@
+
 """Vector embedding service module based on the LangChain Embeddings interface"""
 
 from typing import List

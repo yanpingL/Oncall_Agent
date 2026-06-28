@@ -1,3 +1,4 @@
+
 """
 Executor node: execute one plan step.
 Implemented based on the official LangGraph tutorial.

@@ -1,3 +1,4 @@
+
 """Utility module"""
 
 from app.utils import logger  # noqa: F401

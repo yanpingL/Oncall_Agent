@@ -1,3 +1,4 @@
+
 """Time tool for getting current time information"""
 
 from datetime import datetime

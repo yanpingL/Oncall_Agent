@@ -1,3 +1,4 @@
+
 """Chat API
 
 Provides normal and streaming chat APIs based on the RAG Agent

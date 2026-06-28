@@ -1,3 +1,4 @@
+
 """Document-related data models"""
 
 from typing import Optional
