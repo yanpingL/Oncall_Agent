@@ -79,7 +79,7 @@ agent/
 └── .env.cloud.example           # Cloud runtime environment template
 ```
 
-Runtime files such as real `.env` files, logs, uploads, local vector volumes,
+Runtime files such as real `.env`  files, logs, uploads, local vector volumes,
 Vercel metadata, and private keys are intentionally ignored by Git.
 
 </details>
