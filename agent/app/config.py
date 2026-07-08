@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     port: int = 9900
 
     # LLM provider
-    llm_provider: str = "dashscope"  # dashscope | openai
+    llm_provider: str = "dashscope"  # dashscope | openai determined by .env during tuntime
 
     # DashScope config
     dashscope_api_key: str = ""  # Default empty string; should be loaded from environment variables in practice

@@ -141,6 +141,7 @@ class VectorIndexService:
             ValueError: Raised when the file does not exist
             RuntimeError: Raised when indexing fails
         """
+        # Convert the file_path to object and absolute, normalized path
         path = Path(file_path).resolve()
 
         if not path.exists() or not path.is_file():
@@ -154,6 +155,7 @@ class VectorIndexService:
             logger.info(f"Read file: {path}, content length: {len(content)} characters")
 
             # 2. Delete old data for this file if it exists
+            # Converts a Path object into a string using forward slashes /.
             normalized_path = path.as_posix()
             vector_store_manager.delete_by_source(normalized_path)
 

@@ -22,7 +22,7 @@ class DashScopeEmbeddings(Embeddings):
         self,
         api_key: str,
         model: str = "text-embedding-v4",
-        dimensions: int = 1024,
+        dimensions: int = 1024, # Default value 1024/2048 
     ):
         """
         Initialize DashScope Embeddings
@@ -35,6 +35,7 @@ class DashScopeEmbeddings(Embeddings):
         if not api_key or api_key == "your-api-key-here":
             raise ValueError("Please set the DASHSCOPE_API_KEY environment variable")
         
+        # Creates an OpenAI-compatible client
         self.client = OpenAI(
             api_key=api_key,
             base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"

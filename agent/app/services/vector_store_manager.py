@@ -38,7 +38,7 @@ class VectorStoreManager:
                 "uri": f"http://{config.milvus_host}:{config.milvus_port}",
             }
 
-            # Create LangChain Milvus VectorStore
+            # Create LangChain Milvus VectorStore object to connect to Milvus collection
             # Use the biz collection with field mapping: text_field -> content, vector_field -> vector
             self.vector_store = Milvus(
                 embedding_function=vector_embedding_service,

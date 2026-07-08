@@ -68,7 +68,7 @@ class VectorSearchService:
 
             # 3. Build search parameters
             search_params = {
-                "metric_type": "L2",  # Euclidean distance
+                "metric_type": "COSINE",  # Cosine similariy
                 "params": {"nprobe": 10},
             }
 
@@ -88,7 +88,7 @@ class VectorSearchService:
                     result = SearchResult(
                         id=hit.entity.get("id"),
                         content=hit.entity.get("content"),
-                        score=hit.distance,  # L2 distance; lower is more similar
+                        score=hit.distance,  # COSINE distance; higher is more similar
                         metadata=hit.entity.get("metadata", {}),
                     )
                     search_results.append(result)

@@ -1,9 +1,6 @@
 
 """LLM factory
 
-Use LangChain ChatOpenAI to call Alibaba Cloud DashScope through OpenAI-compatible mode
-This makes it easier to switch to other OpenAI API-compatible model providers later
-
 Supported model providers, by changing only base_url and api_key:
 - Alibaba Cloud DashScope: https://dashscope.aliyuncs.com/compatible-mode/v1
 - OpenAI: https://api.openai.com/v1

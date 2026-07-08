@@ -32,9 +32,9 @@ class DocumentSplitterService:
         # Recursive character splitter for secondary splitting with a larger chunk_size
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size * 2,  # Double chunk_size to reduce chunk count
-            chunk_overlap=self.chunk_overlap,
-            length_function=len,
-            is_separator_regex=False,
+            chunk_overlap=self.chunk_overlap, # Number of characters repeated between neighboring chunks to avoid losing context at boundary
+            length_function=len, # Function used to measure chunk length --> count Python character
+            is_separator_regex=False, # Seperator treated as plain strings, not regex patterns
         )
 
         logger.info(
@@ -72,6 +72,7 @@ class DocumentSplitterService:
             for doc in final_docs:
                 doc.metadata["_source"] = file_path
                 doc.metadata["_extension"] = ".md"
+                # Convert the file_path into Path object and get the name attribute [name]
                 doc.metadata["_file_name"] = Path(file_path).name
 
             logger.info(f"Markdown splitting completed: {file_path} -> {len(final_docs)} chunks")

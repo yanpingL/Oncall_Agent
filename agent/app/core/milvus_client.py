@@ -25,6 +25,8 @@ def _patch_pymilvus_milvus_client_orm_alias() -> None:
     After ``connections.connect(alias="default", ...)`` has established a connection,
     force MilvusClient to use the ``default`` alias so it matches ORM.
     """
+    
+    # check if the _patch...._alias function object has atrri "_done"
     if getattr(_patch_pymilvus_milvus_client_orm_alias, "_done", False):
         return
     try:
@@ -198,7 +200,7 @@ class MilvusClientManager:
             raise RuntimeError("Collection is not initialized")
 
         index_params = {
-            "metric_type": "L2",  # Euclidean distance
+            "metric_type": "COSINE",  # Euclidean distance should use 
             "index_type": "IVF_FLAT", #Use the IVF_FLAT index type. It clusters vectors into groups, then searches only the most relevant groups instead of scanning everything.
             "params": {"nlist": 128}, # Create 128 clusters/lists
         }

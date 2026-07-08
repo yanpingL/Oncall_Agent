@@ -9,13 +9,13 @@ from loguru import logger
 
 
 @tool
-def get_current_time(timezone: str = "Asia/Shanghai") -> str:
+def get_current_time(timezone: str = "Austrlaia/Sydney") -> str:
     """Get current time
     
     Use this tool when the user asks time-related questions such as current time, weekday, or date.
     
     Args:
-        timezone: Timezone, default Asia/Shanghai (Beijing time)
+        timezone: Timezone, default Australia/Sydney
         
     Returns:
         str: Formatted current time information
