@@ -98,13 +98,13 @@ Vercel metadata, and private keys are intentionally ignored by Git.
 | File upload | POST | `/api/upload` | Upload and index documents |
 | Health check | GET | `/health` | Service health |
 
-## Agents Workflow
+## Core Components Workflow
 <details>
-<summary><h3>Knowledge Base Agent (RAG Pattern: Retrieval-Augmented Generation)</h3></summary>
+<summary><h3>Knowledge Base (RAG Pattern: Retrieval-Augmented Generation)</h3></summary>
 
-![Knowledge Base Agent Workflow](agent/assets/knowledge_base_agent_workflow_v2.svg)
+![Knowledge Base Workflow](agent/assets/knowledge_base_agent_workflow_v2.svg)
 
-The core goal of the Knowledge Base Agent is to split the reference files and store them into Vector Database so that future conversation and Diagnosis can reference the knowledge base stored in vector db to generate reliable answer.
+The core goal of the Knowledge Base is to split the reference files and store them into Vector Database so that future conversation and Diagnosis can reference the knowledge base stored in vector db to generate reliable answer.
 
 ```text
 The workflow is split into two lanes matching the original:
@@ -117,7 +117,7 @@ The workflow is split into two lanes matching the original:
 <summary><h3>Conversation Agent (ReAct Pattern: Reasoning + Acting)</h3></summary>
 
 ![Conversation Agent Workflow](agent/assets/conversation_agent_workflow.svg)
-The core goal of the Conversational Agent is to combine external knowledge (RAG retrieval) with tool-calling capabilities (ReAct pattern) to solve complex problem.
+The core goal of the Conversational Agent is to combine external knowledge (RAG retrieval) with tool-calling capabilities (ReAct pattern) to solve daily operation and maintenance problem.
 
 ```text
 The overall flow can be summarized as:
